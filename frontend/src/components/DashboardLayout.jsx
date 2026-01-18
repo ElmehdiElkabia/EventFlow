@@ -27,7 +27,7 @@ const menuItems = {
     { icon: LayoutDashboard, label: "Overview", path: "/dashboard" },
     { icon: Users, label: "Users", path: "/dashboard/users" },
     { icon: Calendar, label: "Events", path: "/dashboard/events" },
-    { icon: FolderOpen, label: "Categories", path: "/dashboard/categories" },
+    { icon: FolderOpen, label: "Categories", path: "/dashboard/manage-categories" },
     { icon: BarChart3, label: "Analytics", path: "/dashboard/analytics" },
     { icon: CreditCard, label: "Transactions", path: "/dashboard/transactions" },
     { icon: MessageSquare, label: "Refunds", path: "/dashboard/refunds" },

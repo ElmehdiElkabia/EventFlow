@@ -1,0 +1,43 @@
+# Node/Vite/Tailwind
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.cache/
+frontend/.turbo/
+frontend/.parcel-cache/
+frontend/.eslintcache
+
+# Backend (if applicable)
+backend/node_modules/
+backend/dist/
+backend/.env
+backend/coverage/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Coverage and reports
+frontend/coverage/
+frontend/.nyc_output/
+
+# IDE/editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
