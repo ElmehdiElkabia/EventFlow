@@ -7,11 +7,6 @@ frontend/.turbo/
 frontend/.parcel-cache/
 frontend/.eslintcache
 
-# Backend (if applicable)
-backend/node_modules/
-backend/dist/
-backend/.env
-backend/coverage/
 
 # Environment files
 .env

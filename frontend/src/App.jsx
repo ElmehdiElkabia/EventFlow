@@ -11,6 +11,8 @@ import EventDetail from "./pages/EventDetail";
 import Dashboard from "./pages/Dashboard";
 import MyTickets from "./pages/MyTickets";
 import NotFound from "./pages/NotFound";
+import Categories from "./pages/Categories";
+import About from "./pages/About";
 
 // Dashboard pages
 import MyEvents from "./pages/dashboard/MyEvents";
@@ -22,7 +24,7 @@ import TicketSales from "./pages/dashboard/TicketSales";
 import UserTickets from "./pages/dashboard/UserTickets";
 import AdminEvents from "./pages/dashboard/AdminEvents";
 import AdminUsers from "./pages/dashboard/AdminUsers";
-import Categories from "./pages/dashboard/Categories";
+import ManageCategories from "./pages/dashboard/ManageCategories";
 import Announcements from "./pages/dashboard/Announcements";
 import Analytics from "./pages/dashboard/Analytics";
 import Settings from "./pages/dashboard/Settings";
@@ -46,6 +48,8 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/events" element={<Events />} />
+		  <Route path="/categories" element={<Categories />} />
+		  <Route path="/about" element={<About />} />
           <Route path="/events/:id" element={<EventDetail />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/tickets" element={<MyTickets />} />
@@ -64,7 +68,7 @@ const App = () => (
           {/* Admin Dashboard */}
           <Route path="/dashboard/events" element={<AdminEvents />} />
           <Route path="/dashboard/users" element={<AdminUsers />} />
-          <Route path="/dashboard/categories" element={<Categories />} />
+          <Route path="/dashboard/manage-categories" element={<ManageCategories />} />
           <Route path="/dashboard/analytics" element={<Analytics />} />
           <Route path="/dashboard/transactions" element={<Transactions />} />
           <Route path="/dashboard/refunds" element={<Refunds />} />
