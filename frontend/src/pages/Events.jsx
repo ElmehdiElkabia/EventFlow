@@ -49,6 +49,7 @@ const allEvents = [
     attendees: 2800,
     capacity: 3000,
     rating: 4.9,
+	featured: false,
   },
   {
     id: "3",
@@ -105,6 +106,7 @@ const allEvents = [
     attendees: 45,
     capacity: 50,
     rating: 4.9,
+	featured: true,
   },
   {
     id: "7",
@@ -210,14 +212,7 @@ const Events = () => {
                   </button>
                 )}
               </div>
-              <Button
-                variant="outline"
-                className="h-12"
-                onClick={() => setShowFilters(!showFilters)}
-              >
-                <SlidersHorizontal className="w-5 h-5 mr-2" />
-                Filters
-              </Button>
+             
             </div>
 
             {/* Category Filters */}
