@@ -54,7 +54,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // ORGANIZER ROUTES
     // ============================================
     
-    Route::prefix('organizer')->group(function () {
+    Route::prefix('organizer')->middleware('role:organizer')->group(function () {
         // Events management
         Route::post('/events', [OrganizerEventController::class, 'store']);
         Route::get('/events', [OrganizerEventController::class, 'index']);
@@ -77,7 +77,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // USER ROUTES
     // ============================================
     
-    Route::prefix('user')->group(function () {
+    Route::prefix('user')->middleware('role:attendee')->group(function () {
         // Tickets
         Route::get('/tickets', [TicketController::class, 'index']);
         Route::post('/tickets/buy', [TicketController::class, 'buy']);
@@ -99,7 +99,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // ADMIN ROUTES
     // ============================================
     
-    Route::prefix('admin')->group(function () {
+    Route::prefix('admin')->middleware('role:admin')->group(function () {
         // Events
         Route::get('/events', [AdminEventController::class, 'index']);
         Route::patch('/events/{id}/approve', [AdminEventController::class, 'approve']);
