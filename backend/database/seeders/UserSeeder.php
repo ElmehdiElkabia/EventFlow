@@ -56,7 +56,7 @@ class UserSeeder extends Seeder
                 'email' => $user['email'],
                 'password' => Hash::make('password'),
             ]);
-            $newUser->assignRole('user');
+            $newUser->assignRole('attendee');
         }
     }
 }

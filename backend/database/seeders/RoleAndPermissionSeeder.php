@@ -18,7 +18,7 @@ class RoleAndPermissionSeeder extends Seeder
         $roles = [
             ['name' => 'admin', 'guard_name' => 'web'],
             ['name' => 'organizer', 'guard_name' => 'web'],
-            ['name' => 'user', 'guard_name' => 'web'],
+            ['name' => 'attendee', 'guard_name' => 'web'],
         ];
 
         foreach ($roles as $role) {
@@ -45,7 +45,7 @@ class RoleAndPermissionSeeder extends Seeder
         $organizerRole = Role::findByName('organizer');
         $organizerRole->givePermissionTo(['create events', 'edit events', 'view reports']);
 
-        $userRole = Role::findByName('user');
-        // User role might not have any special permissions
+        $attendeeRole = Role::findByName('attendee');
+        // Attendee role might not have any special permissions
     }
 }

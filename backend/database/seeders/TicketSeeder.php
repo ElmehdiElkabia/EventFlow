@@ -14,7 +14,7 @@ class TicketSeeder extends Seeder
     public function run(): void
     {
         $events = Event::with('ticketTypes')->get();
-        $users = User::role('user')->get();
+        $users = User::role('attendee')->get();
 
         foreach ($events as $event) {
             if ($users->isEmpty() || $event->ticketTypes->isEmpty()) {
