@@ -1,101 +1,82 @@
+import { useState, useEffect } from "react";
 import EventCard from "./EventCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-
-// Sample events data
-const featuredEvents = [
-  {
-    id: "1",
-    title: "Tech Innovation Summit 2024",
-    description: "Join industry leaders for a day of insights, networking, and breakthrough technologies shaping our future.",
-    date: "Dec 15, 2024",
-    time: "9:00 AM",
-    location: "San Francisco Convention Center",
-    price: 299,
-    image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800",
-    category: "Technology",
-    attendees: 450,
-    capacity: 500,
-    rating: 4.8,
-    featured: true,
-  },
-  {
-    id: "2",
-    title: "Electronic Music Festival",
-    description: "Three days of non-stop electronic beats from world-renowned DJs in an immersive environment.",
-    date: "Dec 20, 2024",
-    time: "6:00 PM",
-    location: "Miami Beach Amphitheater",
-    price: 150,
-    image: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800",
-    category: "Music",
-    attendees: 2800,
-    capacity: 3000,
-    rating: 4.9,
-    featured: true,
-  },
-  {
-    id: "3",
-    title: "Startup Pitch Competition",
-    description: "Watch the next generation of entrepreneurs compete for $100K in funding and mentorship opportunities.",
-    date: "Dec 18, 2024",
-    time: "2:00 PM",
-    location: "Austin Innovation Hub",
-    price: 0,
-    image: "https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800",
-    category: "Business",
-    attendees: 180,
-    capacity: 200,
-    rating: 4.7,
-  },
-  {
-    id: "4",
-    title: "Contemporary Art Exhibition",
-    description: "Explore cutting-edge works from emerging artists pushing the boundaries of modern expression.",
-    date: "Dec 22, 2024",
-    time: "10:00 AM",
-    location: "Metropolitan Gallery NYC",
-    price: 25,
-    image: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800",
-    category: "Arts",
-    attendees: 85,
-    capacity: 150,
-    rating: 4.6,
-  },
-  {
-    id: "5",
-    title: "Gourmet Food & Wine Festival",
-    description: "Savor exquisite cuisines and fine wines from top chefs and vineyards around the world.",
-    date: "Dec 28, 2024",
-    time: "12:00 PM",
-    location: "Napa Valley Estates",
-    price: 175,
-    image: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800",
-    category: "Food & Drink",
-    attendees: 320,
-    capacity: 400,
-    rating: 4.8,
-  },
-  {
-    id: "6",
-    title: "Yoga & Wellness Retreat",
-    description: "A transformative weekend of mindfulness, yoga sessions, and holistic wellness practices.",
-    date: "Jan 5, 2025",
-    time: "7:00 AM",
-    location: "Sedona Retreat Center",
-    price: 450,
-    image: "https://images.unsplash.com/photo-1545205597-3d9d02c29597?w=800",
-    category: "Health",
-    attendees: 45,
-    capacity: 50,
-    rating: 4.9,
-  },
-];
+import { eventService } from "@/services/publicService";
+import { toast } from "sonner";
 
 const FeaturedEvents = () => {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchFeaturedEvents = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Get first 6 events for featured section
+        const response = await eventService.getEvents({ page: 1 });
+        
+        // API returns: { success: true, message: "Success", data: { data: [...], pagination: {...} } }
+        const eventsData = response.data?.data || [];
+        setEvents(eventsData.slice(0, 6)); // Limit to 6 for homepage
+      } catch (err) {
+        console.error('Error fetching featured events:', err);
+        setError(err.response?.data?.message || 'Failed to load events');
+        toast.error('Failed to load featured events');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeaturedEvents();
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="py-24 bg-card/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="py-24 bg-card/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center min-h-[400px] flex items-center justify-center">
+            <div>
+              <p className="text-muted-foreground mb-4">{error}</p>
+              <Button onClick={() => window.location.reload()}>
+                Try Again
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (events.length === 0) {
+    return (
+      <section className="py-24 bg-card/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center min-h-[400px] flex items-center justify-center">
+            <p className="text-muted-foreground">No events available at the moment.</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
   return (
     <section className="py-24 bg-card/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -133,7 +114,7 @@ const FeaturedEvents = () => {
 
         {/* Events Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {featuredEvents.map((event) => (
+          {events.map((event) => (
             <EventCard key={event.id} {...event} />
           ))}
         </div>

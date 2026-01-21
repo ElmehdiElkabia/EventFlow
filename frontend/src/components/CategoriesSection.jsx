@@ -1,20 +1,88 @@
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Music, Palette, Briefcase, GraduationCap, Heart, Utensils, Dumbbell, Camera } from "lucide-react";
+import { Music, Palette, Briefcase, GraduationCap, Heart, Utensils, Dumbbell, Camera, Loader2 } from "lucide-react";
+import { categoryService } from "@/services/publicService";
+import { toast } from "sonner";
 
-const categories = [
-  { id: "music", name: "Music & Concerts", icon: Music, count: 234, color: "from-purple-500 to-pink-500" },
-  { id: "arts", name: "Arts & Culture", icon: Palette, count: 156, color: "from-blue-500 to-cyan-500" },
-  { id: "business", name: "Business & Networking", icon: Briefcase, count: 189, color: "from-amber-500 to-orange-500" },
-  { id: "education", name: "Education & Workshops", icon: GraduationCap, count: 312, color: "from-green-500 to-emerald-500" },
-  { id: "charity", name: "Charity & Causes", icon: Heart, count: 87, color: "from-rose-500 to-red-500" },
-  { id: "food", name: "Food & Drink", icon: Utensils, count: 145, color: "from-yellow-500 to-amber-500" },
-  { id: "sports", name: "Sports & Fitness", icon: Dumbbell, count: 203, color: "from-teal-500 to-green-500" },
-  { id: "photography", name: "Film & Photography", icon: Camera, count: 98, color: "from-indigo-500 to-purple-500" },
+// Icon mapping for categories
+const iconMap = {
+  "Music": Music,
+  "Arts": Palette,
+  "Business": Briefcase,
+  "Education": GraduationCap,
+  "Charity": Heart,
+  "Food": Utensils,
+  "Sports": Dumbbell,
+  "Photography": Camera,
+  "Technology": Briefcase,
+  "Health": Heart,
+};
+
+// Color mapping for gradients
+const colorMap = [
+  "from-purple-500 to-pink-500",
+  "from-blue-500 to-cyan-500",
+  "from-amber-500 to-orange-500",
+  "from-green-500 to-emerald-500",
+  "from-rose-500 to-red-500",
+  "from-yellow-500 to-amber-500",
+  "from-teal-500 to-green-500",
+  "from-indigo-500 to-purple-500",
 ];
 
 const CategoriesSection = () => {
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const response = await categoryService.getCategories();
+        
+        // API returns: { success: true, message: "Success", data: [...] }
+        const categoriesData = response.data || [];
+        
+        // Map categories with icons and colors
+        const mappedCategories = categoriesData.map((cat, index) => ({
+          ...cat,
+          icon: iconMap[cat.name] || Briefcase,
+          color: cat.gradient || colorMap[index % colorMap.length],
+        }));
+        
+        setCategories(mappedCategories.slice(0, 8)); // Limit to 8 for homepage
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+        setError(err.response?.data?.message || 'Failed to load categories');
+        toast.error('Failed to load categories');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="py-24 bg-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-center min-h-[300px]">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (error || categories.length === 0) {
+    return null; // Silently hide categories section if error or empty
+  }
   return (
     <section className="py-24 bg-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

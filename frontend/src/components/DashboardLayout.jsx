@@ -1,6 +1,7 @@
 import { ReactNode, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Calendar,
   LayoutDashboard,
@@ -26,7 +27,7 @@ const menuItems = {
   admin: [
     { icon: LayoutDashboard, label: "Overview", path: "/dashboard" },
     { icon: Users, label: "Users", path: "/dashboard/users" },
-    { icon: Calendar, label: "Events", path: "/dashboard/events" },
+    { icon: Calendar, label: "Events", path: "/dashboard/admin/events" },
     { icon: FolderOpen, label: "Categories", path: "/dashboard/manage-categories" },
     { icon: BarChart3, label: "Analytics", path: "/dashboard/analytics" },
     { icon: CreditCard, label: "Transactions", path: "/dashboard/transactions" },
@@ -36,14 +37,12 @@ const menuItems = {
   organizer: [
     { icon: LayoutDashboard, label: "Overview", path: "/dashboard" },
     { icon: Calendar, label: "My Events", path: "/dashboard/my-events" },
-    { icon: Plus, label: "Create Event", path: "/dashboard/create-event" },
+    { icon: Plus, label: "Create Event", path: "/dashboard/events/create" },
     { icon: Ticket, label: "Ticket Sales", path: "/dashboard/sales" },
-    { icon: Users, label: "Attendees", path: "/dashboard/attendees" },
-    { icon: QrCode, label: "Check-in", path: "/dashboard/checkin" },
     { icon: MessageSquare, label: "Announcements", path: "/dashboard/announcements" },
     { icon: Settings, label: "Settings", path: "/dashboard/settings" },
   ],
-  user: [
+  attendee: [
     { icon: LayoutDashboard, label: "Overview", path: "/dashboard" },
     { icon: Ticket, label: "My Tickets", path: "/dashboard/tickets" },
     { icon: Calendar, label: "Upcoming Events", path: "/dashboard/upcoming" },
@@ -56,7 +55,9 @@ const menuItems = {
 const DashboardLayout = ({ children, role }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
-  const items = menuItems[role];
+  const { user } = useAuth();
+  const currentRole = role || user?.role || "attendee";
+  const items = menuItems[currentRole] || [];
 
   return (
     <div className="min-h-screen bg-background dark">
@@ -174,7 +175,7 @@ const DashboardLayout = ({ children, role }) => {
               {/* Quick Actions */}
               {role === "organizer" && (
                 <Button variant="hero" size="sm" asChild>
-                  <Link to="/dashboard/create-event">
+                  <Link to="/dashboard/events/create">
                     <Plus className="w-4 h-4 mr-1" />
                     New Event
                   </Link>
