@@ -22,10 +22,14 @@ class EventController extends BaseController
     public function index()
     {
         $events = Event::where('status', 'approved')
-            ->with('category', 'organizers', 'tickets', 'reviews')
+            ->with('category', 'organizers', 'tickets', 'reviews', 'ticketTypes')
             ->paginate(15);
 
-        $formatted = $events->map(fn($event) => $this->formatEvent($event))->all();
+        // Map the underlying collection from the paginator
+        $formatted = $events->getCollection()
+            ->map(fn($event) => $this->formatEvent($event))
+            ->values()
+            ->all();
 
         return $this->success([
             'data' => $formatted,
@@ -64,14 +68,14 @@ class EventController extends BaseController
             'id' => $event->id,
             'title' => $event->title,
             'description' => $event->description,
-            'date' => $event->date->format('M d, Y'),
-            'time' => $event->date->format('h:i A'),
+            'date' => optional($event->start_date)->format('M d, Y'),
+            'time' => optional($event->start_date)->format('h:i A'),
             'location' => $event->location,
-            'address' => $event->address,
+            'address' => '',
             'latitude' => $event->latitude,
             'longitude' => $event->longitude,
             'capacity' => $event->capacity,
-            'image' => $event->image,
+            'image' => $event->image_url,
             'category' => [
                 'id' => $event->category->id,
                 'name' => $event->category->name,
@@ -116,16 +120,13 @@ class EventController extends BaseController
         return [
             'id' => $event->id,
             'title' => $event->title,
-            'description' => substr($event->description, 0, 100) . '...',
-            'date' => $event->date->format('M d, Y'),
-            'time' => $event->date->format('h:i A'),
+            'description' => substr((string) $event->description, 0, 100) . '...',
+            'date' => optional($event->start_date)->format('M d, Y'),
+            'time' => optional($event->start_date)->format('h:i A'),
             'location' => $event->location,
             'price' => $event->ticketTypes->min('price') ?? 0,
-            'image' => $event->image,
-            'category' => [
-                'id' => $event->category->id,
-                'name' => $event->category->name,
-            ],
+            'image' => $event->image_url,
+            'category' => $event->category?->name,
             'attendees' => $event->tickets->count(),
             'capacity' => $event->capacity,
             'rating' => round($avgRating, 1),

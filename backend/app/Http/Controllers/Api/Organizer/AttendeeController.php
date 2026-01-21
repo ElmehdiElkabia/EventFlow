@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Organizer;
 
 use App\Http\Controllers\Api\BaseController;
 use App\Models\Attendee;
+use Illuminate\Http\Request;
 
 /**
  * Organizer Attendee Controller
@@ -17,22 +18,24 @@ class AttendeeController extends BaseController
      * 
      * @return \Illuminate\Http\JsonResponse
      */
-    public function index()
+    public function index(Request $request)
     {
         $attendees = Attendee::whereHas('event.organizers', function ($query) {
             $query->where('user_id', auth()->user()->id);
         })
+        ->when($request->event_id, fn($q) => $q->where('event_id', $request->event_id))
         ->with('user', 'event', 'ticket')
         ->get()
         ->map(fn($attendee) => [
             'id' => $attendee->id,
+            'eventId' => $attendee->event_id,
             'name' => $attendee->user->name,
             'email' => $attendee->user->email,
             'ticketCode' => $attendee->ticket->code,
             'event' => $attendee->event->title,
-            'purchaseDate' => $attendee->created_at->format('M d, Y'),
+            'purchaseDate' => $attendee->created_at->format('Y-m-d'),
             'status' => $attendee->status,
-            'checkedInAt' => $attendee->checked_in_at?->format('M d, Y h:i A'),
+            'checkedInAt' => $attendee->checked_in_at?->format('Y-m-d H:i:s'),
         ]);
 
         return $this->success($attendees->all());

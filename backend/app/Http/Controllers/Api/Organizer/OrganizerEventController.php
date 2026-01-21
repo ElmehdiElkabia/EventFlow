@@ -23,19 +23,19 @@ class OrganizerEventController extends BaseController
     {
         $events = auth()->user()
             ->organizedEvents()
-            ->with('category', 'tickets')
+            ->with('category', 'tickets', 'ticketTypes')
             ->latest()
             ->get()
             ->map(fn($event) => [
                 'id' => $event->id,
                 'title' => $event->title,
-                'date' => $event->date->format('M d, Y'),
+                'date' => $event->start_date->format('M d, Y'),
                 'location' => $event->location,
                 'capacity' => $event->capacity,
                 'ticketsSold' => $event->tickets->count(),
                 'price' => $event->ticketTypes->min('price') ?? 0,
                 'status' => $event->status,
-                'image' => $event->image,
+                'image' => $event->image_url,
             ]);
 
         return $this->success($events->all());
@@ -51,15 +51,15 @@ class OrganizerEventController extends BaseController
     {
         $event = Event::create([
             'title' => $request->title,
+            'slug' => \Str::slug($request->title),
             'description' => $request->description,
-            'date' => $request->date,
+            'start_date' => $request->date,
             'end_date' => $request->end_date,
             'location' => $request->location,
-            'address' => $request->address,
             'latitude' => $request->latitude,
             'longitude' => $request->longitude,
             'capacity' => $request->capacity,
-            'image' => $request->image,
+            'image_url' => $request->image,
             'category_id' => $request->category_id,
             'status' => 'pending_approval',
         ]);

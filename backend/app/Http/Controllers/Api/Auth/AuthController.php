@@ -59,8 +59,9 @@ class AuthController extends BaseController
             'password' => Hash::make($request->password),
         ]);
 
-        // Assign attendee role by default
-        $user->assignRole('attendee');
+        // Assign role (default to attendee if not specified)
+        $role = $request->role ?? 'attendee';
+        $user->assignRole($role);
 
         $token = $user->createToken('api-token')->plainTextToken;
 
@@ -70,7 +71,7 @@ class AuthController extends BaseController
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
-                'role' => 'attendee',
+                'role' => $role,
             ],
         ], 'User registered successfully', 201);
     }

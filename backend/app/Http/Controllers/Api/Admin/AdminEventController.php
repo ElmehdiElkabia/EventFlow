@@ -26,12 +26,16 @@ class AdminEventController extends BaseController
                 'id' => $event->id,
                 'title' => $event->title,
                 'organizer' => $event->organizers->first()->name ?? 'N/A',
-                'date' => $event->date->format('M d, Y'),
+                'organizerId' => $event->organizers->first()->id ?? null,
+                'date' => $event->start_date->format('Y-m-d'),
+                'startDate' => $event->start_date->format('Y-m-d H:i:s'),
                 'location' => $event->location,
                 'capacity' => $event->capacity,
                 'ticketsSold' => $event->tickets->count(),
+                'price' => $event->ticketTypes->first()->price ?? 0,
                 'status' => $event->status,
-                'created_at' => $event->created_at->format('M d, Y'),
+                'submittedAt' => $event->created_at->format('Y-m-d'),
+                'image' => $event->image_url ?? null,
             ]);
 
         return $this->success($events->all());
@@ -53,16 +57,11 @@ class AdminEventController extends BaseController
 
         $event->update(['status' => 'approved']);
 
-        // Notify organizers
-        foreach ($event->organizers as $organizer) {
-            $organizer->notify(new \App\Notifications\EventApprovedNotification($event));
-        }
-
         return $this->success([
             'id' => $event->id,
             'title' => $event->title,
             'status' => $event->status,
-        ], 'Event approved');
+        ], 'Event approved successfully');
     }
 
     /**
@@ -80,11 +79,6 @@ class AdminEventController extends BaseController
         }
 
         $event->update(['status' => 'rejected']);
-
-        // Notify organizers
-        foreach ($event->organizers as $organizer) {
-            $organizer->notify(new \App\Notifications\EventRejectedNotification($event));
-        }
 
         return $this->success([
             'id' => $event->id,
