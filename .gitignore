@@ -37,3 +37,13 @@ frontend/.nyc_output/
 Thumbs.db
 desktop.ini
 .github/copilot-instructions.md
+backend/API_DOCUMENTATION.md
+backend/API_IMPLEMENTATION_SUMMARY.md
+backend/API_REFERENCE.md
+backend/API_TESTING_GUIDE.md
+backend/DELIVERY_CHECKLIST.md
+backend/fix_models.sh
+backend/FRONTEND_API_DESIGN.md
+backend/FRONTEND_INTEGRATION.md
+backend/PROJECT_COMPLETION_SUMMARY.md
+backend/README_API.md
