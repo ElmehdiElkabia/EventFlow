@@ -1,0 +1,34 @@
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class UpdateRefundRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return [
+            'user_id' => 'sometimes|exists:users,id',
+            'event_id' => 'sometimes|exists:events,id',
+            'ticket_id' => 'sometimes|exists:tickets,id',
+            'transaction_id' => 'sometimes|exists:transactions,id',
+            'amount' => 'sometimes|numeric|min:0.01',
+            'reason' => 'sometimes|string',
+            'status' => 'sometimes|in:pending,approved,rejected,processed',
+        ];
+    }
+}
