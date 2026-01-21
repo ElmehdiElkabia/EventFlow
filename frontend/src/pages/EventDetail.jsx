@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -16,57 +16,78 @@ import {
   Ticket,
   ChevronLeft,
   Check,
+  Loader2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-
-// Sample event data (would come from API)
-const eventData = {
-  id: "1",
-  title: "Tech Innovation Summit 2024",
-  description: `Join us for the most anticipated technology conference of the year! The Tech Innovation Summit 2024 brings together industry leaders, visionary entrepreneurs, and tech enthusiasts for a day of insights, networking, and breakthrough discoveries.
-
-Explore the latest advancements in AI, blockchain, quantum computing, and sustainable technology. Hear from keynote speakers who are shaping the future of tech, participate in hands-on workshops, and connect with like-minded professionals.
-
-What to expect:
-• Keynote speeches from Fortune 500 tech executives
-• Panel discussions on emerging technologies
-• Interactive workshops and demos
-• Networking sessions with industry leaders
-• Exclusive product launches and announcements`,
-  date: "December 15, 2024",
-  time: "9:00 AM - 6:00 PM",
-  location: "San Francisco Convention Center",
-  address: "747 Howard St, San Francisco, CA 94103",
-  price: 299,
-  image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200",
-  category: "Technology",
-  attendees: 450,
-  capacity: 500,
-  rating: 4.8,
-  reviewCount: 128,
-  organizer: {
-    name: "TechEvents Global",
-    avatar: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100",
-    verified: true,
-    eventsHosted: 45,
-  },
-  highlights: [
-    "15+ Expert Speakers",
-    "Networking Lunch Included",
-    "Workshop Materials",
-    "Certificate of Attendance",
-    "Exclusive Swag Bag",
-  ],
-};
+import { eventService } from "@/services/publicService";
 
 const EventDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const [eventData, setEventData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [ticketCount, setTicketCount] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
 
-  const spotsLeft = eventData.capacity - eventData.attendees;
-  const totalPrice = eventData.price * ticketCount;
+  useEffect(() => {
+    const fetchEvent = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await eventService.getEvent(id);
+        
+        // API returns: { success: true, message: "Success", data: {...} }
+        setEventData(response.data);
+      } catch (err) {
+        console.error('Error fetching event:', err);
+        setError(err.response?.data?.message || 'Failed to load event');
+        toast.error('Event not found');
+        
+        // Redirect to events page if event not found
+        if (err.response?.status === 404) {
+          setTimeout(() => navigate('/events'), 2000);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchEvent();
+    }
+  }, [id, navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background dark">
+        <Navbar />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error || !eventData) {
+    return (
+      <div className="min-h-screen bg-background dark">
+        <Navbar />
+        <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+          <p className="text-muted-foreground mb-4">{error || 'Event not found'}</p>
+          <Button variant="outline" onClick={() => navigate('/events')}>
+            Back to Events
+          </Button>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  const spotsLeft = eventData.capacity - eventData.highlights.attendees;
+  const totalPrice = (eventData.ticketTypes?.[0]?.price || 0) * ticketCount;
 
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -135,11 +156,11 @@ const EventDetail = () => {
                 {/* Title Section */}
                 <div className="mb-6">
                   <div className="flex flex-wrap items-center gap-3 mb-4">
-                    <Badge variant="glass">{eventData.category}</Badge>
+                    <Badge variant="glass">{eventData.category?.name || eventData.category}</Badge>
                     <div className="flex items-center gap-1 text-amber-400">
                       <Star className="w-4 h-4 fill-current" />
-                      <span className="text-sm font-medium">{eventData.rating}</span>
-                      <span className="text-muted-foreground text-sm">({eventData.reviewCount} reviews)</span>
+                      <span className="text-sm font-medium">{eventData.highlights?.rating || 0}</span>
+                      <span className="text-muted-foreground text-sm">({eventData.highlights?.reviews || 0} reviews)</span>
                     </div>
                   </div>
                   <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-4">
@@ -197,48 +218,29 @@ const EventDetail = () => {
                   </div>
                 </div>
 
-                {/* Highlights */}
-                <div className="mb-8">
-                  <h2 className="text-xl font-semibold text-foreground mb-4">What's Included</h2>
-                  <div className="grid sm:grid-cols-2 gap-3">
-                    {eventData.highlights.map((highlight, index) => (
-                      <div key={index} className="flex items-center gap-3">
-                        <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
-                          <Check className="w-4 h-4 text-primary" />
-                        </div>
-                        <span className="text-muted-foreground">{highlight}</span>
-                      </div>
-                    ))}
+                {/* What's Included */}
+                {eventData.ticketTypes && eventData.ticketTypes.length > 0 && (
+                  <div className="mb-8">
+                    <h2 className="text-xl font-semibold text-foreground mb-4">Ticket Types</h2>
+                    <div className="space-y-3">
+                      {eventData.ticketTypes.map((ticketType) => (
+                        <Card key={ticketType.id} variant="glass">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-semibold text-foreground">{ticketType.name}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  Available: {ticketType.quantity - ticketType.sold}
+                                </p>
+                              </div>
+                              <p className="text-lg font-bold text-primary">${ticketType.price}</p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
                   </div>
-                </div>
-
-                {/* Organizer */}
-                <div>
-                  <h2 className="text-xl font-semibold text-foreground mb-4">Organizer</h2>
-                  <Card variant="glass">
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <img
-                          src={eventData.organizer.avatar}
-                          alt={eventData.organizer.name}
-                          className="w-14 h-14 rounded-full object-cover"
-                        />
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-semibold text-foreground">{eventData.organizer.name}</p>
-                            {eventData.organizer.verified && (
-                              <Badge variant="success" className="text-xs">Verified</Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {eventData.organizer.eventsHosted} events hosted
-                          </p>
-                        </div>
-                      </div>
-                      <Button variant="outline">Follow</Button>
-                    </CardContent>
-                  </Card>
-                </div>
+                )}
               </motion.div>
             </div>
 
@@ -256,12 +258,12 @@ const EventDetail = () => {
                       <div>
                         <p className="text-sm text-muted-foreground">Price per ticket</p>
                         <p className="text-3xl font-bold text-foreground">
-                          ${eventData.price}
+                          ${eventData.ticketTypes?.[0]?.price || 0}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Users className="w-5 h-5" />
-                        <span>{spotsLeft} spots left</span>
+                        <span>{spotsLeft > 0 ? spotsLeft : 0} spots left</span>
                       </div>
                     </div>
 

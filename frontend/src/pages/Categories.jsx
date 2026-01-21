@@ -1,7 +1,12 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { categoryService } from "@/services/publicService";
+import { toast } from "sonner";
 import { 
   Music, 
   Palette, 
@@ -17,118 +22,61 @@ import {
   TreePine
 } from "lucide-react";
 
-const categories = [
-  {
-    id: "music",
-    name: "Music & Concerts",
-    icon: Music,
-    count: 1250,
-    description: "Live performances, festivals, and musical gatherings",
-    gradient: "from-pink-500 to-rose-500",
-    image: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&h=300&fit=crop"
-  },
-  {
-    id: "art",
-    name: "Art & Culture",
-    icon: Palette,
-    count: 890,
-    description: "Exhibitions, galleries, and cultural experiences",
-    gradient: "from-purple-500 to-indigo-500",
-    image: "https://images.unsplash.com/photo-1536924940846-227afb31e2a5?w=400&h=300&fit=crop"
-  },
-  {
-    id: "sports",
-    name: "Sports & Fitness",
-    icon: Dumbbell,
-    count: 720,
-    description: "Competitions, marathons, and fitness classes",
-    gradient: "from-green-500 to-emerald-500",
-    image: "https://images.unsplash.com/photo-1461896836934- voices?w=400&h=300&fit=crop"
-  },
-  {
-    id: "tech",
-    name: "Technology",
-    icon: Lightbulb,
-    count: 560,
-    description: "Tech conferences, hackathons, and innovation meetups",
-    gradient: "from-blue-500 to-cyan-500",
-    image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=300&fit=crop"
-  },
-  {
-    id: "food",
-    name: "Food & Drink",
-    icon: Utensils,
-    count: 480,
-    description: "Culinary experiences, tastings, and food festivals",
-    gradient: "from-orange-500 to-amber-500",
-    image: "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=300&fit=crop"
-  },
-  {
-    id: "business",
-    name: "Business",
-    icon: Briefcase,
-    count: 340,
-    description: "Networking events, seminars, and professional development",
-    gradient: "from-slate-500 to-zinc-500",
-    image: "https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=400&h=300&fit=crop"
-  },
-  {
-    id: "education",
-    name: "Education",
-    icon: GraduationCap,
-    count: 290,
-    description: "Workshops, courses, and learning experiences",
-    gradient: "from-teal-500 to-cyan-500",
-    image: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=400&h=300&fit=crop"
-  },
-  {
-    id: "charity",
-    name: "Charity & Causes",
-    icon: Heart,
-    count: 180,
-    description: "Fundraisers, volunteer events, and community initiatives",
-    gradient: "from-red-500 to-pink-500",
-    image: "https://images.unsplash.com/photo-1559027615-cd4628902d4a?w=400&h=300&fit=crop"
-  },
-  {
-    id: "photography",
-    name: "Photography",
-    icon: Camera,
-    count: 150,
-    description: "Photo walks, exhibitions, and photography workshops",
-    gradient: "from-violet-500 to-purple-500",
-    image: "https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=400&h=300&fit=crop"
-  },
-  {
-    id: "gaming",
-    name: "Gaming & Esports",
-    icon: Gamepad2,
-    count: 220,
-    description: "Gaming tournaments, LAN parties, and esports events",
-    gradient: "from-fuchsia-500 to-pink-500",
-    image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400&h=300&fit=crop"
-  },
-  {
-    id: "travel",
-    name: "Travel & Adventure",
-    icon: Plane,
-    count: 130,
-    description: "Group trips, adventure tours, and travel meetups",
-    gradient: "from-sky-500 to-blue-500",
-    image: "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=400&h=300&fit=crop"
-  },
-  {
-    id: "outdoor",
-    name: "Outdoor & Nature",
-    icon: TreePine,
-    count: 200,
-    description: "Hiking groups, nature walks, and outdoor activities",
-    gradient: "from-lime-500 to-green-500",
-    image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=300&fit=crop"
-  },
-];
+// Icon mapping for categories
+const iconMap = {
+  'music': Music,
+  'art': Palette,
+  'sports': Dumbbell,
+  'tech': Lightbulb,
+  'food': Utensils,
+  'business': Briefcase,
+  'education': GraduationCap,
+  'charity': Heart,
+  'photography': Camera,
+  'gaming': Gamepad2,
+  'travel': Plane,
+  'outdoor': TreePine,
+};
+
+// Gradient mapping for categories
+const gradientMap = {
+  'music': 'from-pink-500 to-rose-500',
+  'art': 'from-purple-500 to-indigo-500',
+  'sports': 'from-green-500 to-emerald-500',
+  'tech': 'from-blue-500 to-cyan-500',
+  'food': 'from-orange-500 to-amber-500',
+  'business': 'from-slate-500 to-zinc-500',
+  'education': 'from-teal-500 to-cyan-500',
+  'charity': 'from-red-500 to-pink-500',
+  'photography': 'from-violet-500 to-purple-500',
+  'gaming': 'from-fuchsia-500 to-pink-500',
+  'travel': 'from-sky-500 to-blue-500',
+  'outdoor': 'from-lime-500 to-green-500',
+};
 
 const Categories = () => {
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await categoryService.getCategories();
+        setCategories(response.data || []);
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+        setError(err.response?.data?.message || 'Failed to load categories');
+        toast.error('Failed to load categories');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
   return (
     <div className="min-h-screen bg-background dark">
       <Navbar />
@@ -157,52 +105,53 @@ const Categories = () => {
       <section className="py-12 px-4 pb-24">
         <div className="container mx-auto max-w-6xl">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {categories.map((category, index) => (
-              <motion.div
-                key={category.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.05 }}
-              >
-                <Link
-                  to={`/events?category=${category.id}`}
-                  className="group block relative overflow-hidden rounded-2xl bg-card border border-border hover:border-primary/50 transition-all duration-300"
-                >
-                  {/* Background Image */}
-                  <div className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity ">
-                    <img
-                      src={category.image}
-                      alt={category.name}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/40" />
-                  </div>
+            {categories.map((category, index) => {
+              const Icon = iconMap[category.name.toLowerCase()] || Music;
+              const gradient = gradientMap[category.name.toLowerCase()] || 'from-pink-500 to-rose-500';
 
-                  {/* Content */}
-                  <div className="relative p-6">
-                    <div className="flex items-start gap-4">
-                      <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${category.gradient} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform`}>
-                        <category.icon className="w-7 h-7 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-lg font-semibold mb-1 group-hover:text-primary transition-colors text-foreground">
-                          {category.name}
-                        </h3>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                          {category.description}
-                        </p>
-                        <span className="text-sm font-medium text-primary">
-                          {category.count.toLocaleString()} events
-                        </span>
+              return (
+                <motion.div
+                  key={category.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: index * 0.05 }}
+                >
+                  <Link
+                    to={`/events?category=${category.id}`}
+                    className="group block relative overflow-hidden rounded-2xl bg-card border border-border hover:border-primary/50 transition-all duration-300"
+                  >
+                    {/* Background Image */}
+                    <div className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity ">
+                      <div className="w-full h-full bg-primary/10" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/40" />
+                    </div>
+
+                    {/* Content */}
+                    <div className="relative p-6">
+                      <div className="flex items-start gap-4">
+                        <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform`}>
+                          <Icon className="w-7 h-7 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="text-lg font-semibold mb-1 group-hover:text-primary transition-colors text-foreground">
+                            {category.name}
+                          </h3>
+                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                            Browse events in this category
+                          </p>
+                          <span className="text-sm font-medium text-primary">
+                            View Category
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Hover Glow */}
-                  <div className={`absolute inset-0 opacity-0 group-hover:opacity-10 bg-gradient-to-br ${category.gradient} transition-opacity pointer-events-none`} />
-                </Link>
-              </motion.div>
-            ))}
+                    {/* Hover Glow */}
+                    <div className={`absolute inset-0 opacity-0 group-hover:opacity-10 bg-gradient-to-br ${gradient} transition-opacity pointer-events-none`} />
+                  </Link>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </section>

@@ -4,23 +4,48 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar, Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import { Calendar, Eye, EyeOff, Mail, Lock, User, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("user");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [role, setRole] = useState("attendee");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { register } = useAuth();
 
-const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // TODO: Implement actual registration with Supabase
-    console.log("Register attempt:", { name, email, password, role });
-    navigate("/dashboard");
-};
+
+    // Validate passwords match
+    if (password !== passwordConfirmation) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await register({ name, email, password, password_confirmation: passwordConfirmation, role });
+      toast.success("Account created successfully!");
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("Registration error:", error);
+      const errorMessage = error.response?.data?.message || 
+                          error.response?.data?.errors?.email?.[0] || 
+                          "Registration failed. Please try again.";
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-4 dark">
@@ -105,6 +130,31 @@ const handleSubmit = (e) => {
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
+                <p className="text-xs text-muted-foreground">Must be at least 8 characters</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password_confirmation">Confirm Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    id="password_confirmation"
+                    type={showPasswordConfirm ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={passwordConfirmation}
+                    onChange={(e) => setPasswordConfirmation(e.target.value)}
+                    className="pl-10 pr-10 bg-background/50"
+                    required
+                    minLength={8}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPasswordConfirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
 
               {/* Role Selection */}
@@ -113,9 +163,9 @@ const handleSubmit = (e) => {
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => setRole("user")}
+                    onClick={() => setRole("attendee")}
                     className={`p-4 rounded-xl border transition-all duration-200 ${
-                      role === "user"
+                      role === "attendee"
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-border bg-background/50 text-muted-foreground hover:border-primary/50"
                     }`}
@@ -136,8 +186,15 @@ const handleSubmit = (e) => {
                 </div>
               </div>
 
-              <Button type="submit" variant="hero" className="w-full" size="lg">
-                Create Account
+              <Button type="submit" variant="hero" className="w-full" size="lg" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating account...
+                  </>
+                ) : (
+                  "Create Account"
+                )}
               </Button>
 
               <p className="text-xs text-muted-foreground text-center">

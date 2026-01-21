@@ -1,47 +1,76 @@
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { QrCode, Calendar, MapPin, Download } from "lucide-react";
+import { QrCode, Calendar, MapPin, Download, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
-
-const tickets = [
-  {
-    id: "TKT-001",
-    eventTitle: "Tech Innovation Summit 2024",
-    date: "Dec 15, 2024",
-    time: "9:00 AM",
-    location: "San Francisco Convention Center",
-    ticketType: "VIP Pass",
-    price: "$299",
-    status: "active",
-    qrCode: "QRCODE123456",
-  },
-  {
-    id: "TKT-002",
-    eventTitle: "Electronic Music Festival",
-    date: "Dec 20, 2024",
-    time: "6:00 PM",
-    location: "Miami Beach Amphitheater",
-    ticketType: "General Admission",
-    price: "$150",
-    status: "active",
-    qrCode: "QRCODE789012",
-  },
-  {
-    id: "TKT-003",
-    eventTitle: "Yoga & Wellness Retreat",
-    date: "Jan 5, 2025",
-    time: "7:00 AM",
-    location: "Sedona Retreat Center",
-    ticketType: "Full Weekend",
-    price: "$450",
-    status: "upcoming",
-    qrCode: "QRCODE345678",
-  },
-];
+import { toast } from "sonner";
+import { ticketService } from "@/services/userService";
+import { Link } from "react-router-dom";
 
 const MyTickets = () => {
+  const [tickets, setTickets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchTickets = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await ticketService.getMyTickets();
+        setTickets(response.data || []);
+      } catch (err) {
+        console.error('Error fetching tickets:', err);
+        setError(err.response?.data?.message || 'Failed to load tickets');
+        toast.error('Failed to load your tickets');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTickets();
+  }, []);
+
+  if (loading) {
+    return (
+      <DashboardLayout role="user">
+        <div className="space-y-8">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">My Tickets</h1>
+            <p className="text-muted-foreground">
+              View and manage your event tickets
+            </p>
+          </div>
+          <div className="flex items-center justify-center min-h-[400px]">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout role="user">
+        <div className="space-y-8">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">My Tickets</h1>
+            <p className="text-muted-foreground">
+              View and manage your event tickets
+            </p>
+          </div>
+          <Card variant="glass" className="p-8 text-center">
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button variant="outline" onClick={() => window.location.reload()}>
+              Try Again
+            </Button>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
   return (
     <DashboardLayout role="user">
       <div className="space-y-8">
@@ -145,7 +174,9 @@ const MyTickets = () => {
             <p className="text-muted-foreground mb-6">
               Browse events and get your first ticket!
             </p>
-            <Button variant="hero">Browse Events</Button>
+            <Button variant="hero" asChild>
+              <Link to="/events">Browse Events</Link>
+            </Button>
           </Card>
         )}
       </div>
