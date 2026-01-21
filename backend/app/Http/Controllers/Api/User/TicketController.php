@@ -27,13 +27,13 @@ class TicketController extends BaseController
             ->map(fn($ticket) => [
                 'id' => $ticket->id,
                 'eventTitle' => $ticket->event->title,
-                'date' => $ticket->event->date->format('M d, Y'),
-                'time' => $ticket->event->date->format('h:i A'),
+                'date' => optional($ticket->event->start_date)->format('M d, Y'),
+                'time' => optional($ticket->event->start_date)->format('h:i A'),
                 'location' => $ticket->event->location,
                 'ticketType' => $ticket->ticketType->name,
                 'price' => $ticket->ticketType->price,
                 'status' => $ticket->status,
-                'qrCode' => $ticket->code, // Or generate QR code
+                'qrCode' => $ticket->ticket_code, // ticket_code field from schema
             ]);
 
         return $this->success($tickets->all());
@@ -68,8 +68,10 @@ class TicketController extends BaseController
                 'user_id' => auth()->user()->id,
                 'event_id' => $event->id,
                 'ticket_type_id' => $request->ticket_type_id,
-                'code' => 'TKT-' . uniqid(),
-                'status' => 'active',
+                'ticket_code' => 'TKT-' . uniqid(),
+                'status' => 'valid',
+                'price' => $request->amount / $request->quantity,
+                'purchased_at' => now(),
             ]);
 
             // Create attendee record
@@ -82,7 +84,7 @@ class TicketController extends BaseController
 
             $tickets[] = [
                 'id' => $ticket->id,
-                'code' => $ticket->code,
+                'code' => $ticket->ticket_code,
             ];
         }
 
