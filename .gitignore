@@ -36,3 +36,4 @@ frontend/.nyc_output/
 .DS_Store
 Thumbs.db
 desktop.ini
+.github/copilot-instructions.md
