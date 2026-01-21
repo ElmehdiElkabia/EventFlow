@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,64 +29,53 @@ import {
   XCircle,
   Eye,
   Clock,
+  Loader2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
-
-// Mock events data for admin
-const mockEvents = [
-  {
-    id: "1",
-    title: "Tech Innovation Summit 2024",
-    organizer: "John Doe",
-    date: "2024-12-15",
-    location: "San Francisco, CA",
-    capacity: 500,
-    price: 299,
-    status: "approved",
-    submittedAt: "2024-11-10",
-  },
-  {
-    id: "2",
-    title: "Blockchain Conference",
-    organizer: "Jane Smith",
-    date: "2024-12-22",
-    location: "New York, NY",
-    capacity: 300,
-    price: 199,
-    status: "pending",
-    submittedAt: "2024-12-01",
-  },
-  {
-    id: "3",
-    title: "AI Workshop",
-    organizer: "Mike Johnson",
-    date: "2024-12-18",
-    location: "Austin, TX",
-    capacity: 50,
-    price: 0,
-    status: "pending",
-    submittedAt: "2024-12-02",
-  },
-  {
-    id: "4",
-    title: "Crypto Meetup",
-    organizer: "Sarah Davis",
-    date: "2024-12-25",
-    location: "Miami, FL",
-    capacity: 100,
-    price: 50,
-    status: "rejected",
-    submittedAt: "2024-11-28",
-  },
-];
+import adminService from "@/services/adminService";
 
 const AdminEvents = () => {
-  const [events, setEvents] = useState(mockEvents);
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [actionDialog, setActionDialog] = useState({ open: false, type: null, eventId: null });
   const [rejectionReason, setRejectionReason] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // Fetch events on component mount
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await adminService.getEvents();
+      const normalizeStatus = (status) => {
+        if (status === "pending_approval") return "pending";
+        if (status === "approved" || status === "live") return "approved";
+        if (status === "rejected") return "rejected";
+        return status;
+      };
+
+      setEvents(
+        (data || []).map((event) => ({
+          ...event,
+          status: normalizeStatus(event.status),
+        }))
+      );
+    } catch (err) {
+      console.error("Error fetching events:", err);
+      setError(err.message || "Failed to load events");
+      toast.error("Failed to load events");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const pendingEvents = events.filter((e) => e.status === "pending");
   const approvedEvents = events.filter((e) => e.status === "approved");
@@ -109,25 +98,41 @@ const AdminEvents = () => {
     setActionDialog({ open: true, type: "reject", eventId: id });
   };
 
-  const confirmAction = () => {
+  const confirmAction = async () => {
     if (!actionDialog.eventId) return;
 
-    setEvents(
-      events.map((e) =>
-        e.id === actionDialog.eventId
-          ? { ...e, status: actionDialog.type === "approve" ? "approved" : "rejected" }
-          : e
-      )
-    );
+    try {
+      setActionLoading(true);
 
-    toast.success(
-      actionDialog.type === "approve"
-        ? "Event approved successfully!"
-        : "Event rejected."
-    );
+      if (actionDialog.type === "approve") {
+        await adminService.approveEvent(actionDialog.eventId);
+      } else {
+        await adminService.rejectEvent(actionDialog.eventId, rejectionReason);
+      }
 
-    setActionDialog({ open: false, type: null, eventId: null });
-    setRejectionReason("");
+      // Update local state
+      setEvents(
+        events.map((e) =>
+          e.id === actionDialog.eventId
+            ? { ...e, status: actionDialog.type === "approve" ? "approved" : "rejected" }
+            : e
+        )
+      );
+
+      toast.success(
+        actionDialog.type === "approve"
+          ? "Event approved successfully!"
+          : "Event rejected."
+      );
+
+      setActionDialog({ open: false, type: null, eventId: null });
+      setRejectionReason("");
+    } catch (err) {
+      console.error("Error performing action:", err);
+      toast.error("Failed to perform action. Please try again.");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const EventRow = ({ event }) => (
@@ -138,11 +143,11 @@ const AdminEvents = () => {
           <p className="text-sm text-muted-foreground">by {event.organizer}</p>
         </div>
       </TableCell>
-      <TableCell>{new Date(event.date).toLocaleDateString()}</TableCell>
+      <TableCell>{event.date}</TableCell>
       <TableCell>{event.location}</TableCell>
       <TableCell>{event.capacity}</TableCell>
       <TableCell>{event.price === 0 ? "Free" : `$${event.price}`}</TableCell>
-      <TableCell>{new Date(event.submittedAt).toLocaleDateString()}</TableCell>
+      <TableCell>{event.submittedAt}</TableCell>
       <TableCell>
         <Badge
           variant={
@@ -170,6 +175,7 @@ const AdminEvents = () => {
                 size="icon"
                 className="text-emerald-500 hover:text-emerald-600"
                 onClick={() => handleApprove(event.id)}
+                disabled={actionLoading}
               >
                 <CheckCircle className="w-4 h-4" />
               </Button>
@@ -178,6 +184,7 @@ const AdminEvents = () => {
                 size="icon"
                 className="text-destructive hover:text-destructive/80"
                 onClick={() => handleReject(event.id)}
+                disabled={actionLoading}
               >
                 <XCircle className="w-4 h-4" />
               </Button>
@@ -197,8 +204,30 @@ const AdminEvents = () => {
           <p className="text-muted-foreground">Review and approve event submissions</p>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Error state */}
+        {error && (
+          <Card className="border-destructive bg-destructive/5">
+            <CardContent className="p-4">
+              <p className="text-sm text-destructive">{error}</p>
+              <Button variant="outline" size="sm" onClick={fetchEvents} className="mt-2">
+                Retry
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Loading state */}
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground mx-auto mb-2" />
+              <p className="text-muted-foreground">Loading events...</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -322,6 +351,8 @@ const AdminEvents = () => {
             </TabsContent>
           ))}
         </Tabs>
+          </>
+        )}
       </div>
 
       {/* Action Dialog */}
@@ -342,17 +373,30 @@ const AdminEvents = () => {
               placeholder="Enter rejection reason..."
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
+              disabled={actionLoading}
             />
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setActionDialog({ open: false, type: null, eventId: null })}>
+            <Button 
+              variant="outline" 
+              onClick={() => setActionDialog({ open: false, type: null, eventId: null })}
+              disabled={actionLoading}
+            >
               Cancel
             </Button>
             <Button
               variant={actionDialog.type === "approve" ? "hero" : "destructive"}
               onClick={confirmAction}
+              disabled={actionLoading}
             >
-              {actionDialog.type === "approve" ? "Approve" : "Reject"}
+              {actionLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {actionDialog.type === "approve" ? "Approving..." : "Rejecting..."}
+                </>
+              ) : (
+                actionDialog.type === "approve" ? "Approve" : "Reject"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

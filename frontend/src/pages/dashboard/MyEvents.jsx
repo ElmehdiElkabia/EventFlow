@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,9 @@ import {
   Trash2,
   Eye,
   MoreVertical,
+  Loader2,
+  AlertCircle,
+  QrCode,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import {
@@ -34,52 +37,37 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-
-// Mock data for events
-const mockEvents = [
-  {
-    id: "1",
-    title: "Tech Innovation Summit 2024",
-    date: "2024-12-15T10:00:00",
-    location: "San Francisco, CA",
-    capacity: 500,
-    ticketsSold: 450,
-    price: 299,
-    status: "approved",
-    image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400",
-  },
-  {
-    id: "2",
-    title: "Electronic Music Festival",
-    date: "2024-12-20T18:00:00",
-    location: "Los Angeles, CA",
-    capacity: 3000,
-    ticketsSold: 2800,
-    price: 150,
-    status: "approved",
-    image: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400",
-  },
-  {
-    id: "3",
-    title: "Startup Pitch Competition",
-    date: "2024-12-18T14:00:00",
-    location: "Austin, TX",
-    capacity: 200,
-    ticketsSold: 180,
-    price: 0,
-    status: "pending",
-    image: "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=400",
-  },
-];
+import { organizerService } from "@/services/organizerService";
 
 const MyEvents = () => {
-  const [events, setEvents] = useState(mockEvents);
+  const [events, setEvents] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await organizerService.getMyEvents();
+      setEvents(response.data.data || []);
+    } catch (err) {
+      console.error("Failed to fetch events:", err);
+      setError(err.response?.data?.message || "Failed to load events");
+      toast.error("Failed to load events");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredEvents = events.filter((event) =>
-    event.title.toLowerCase().includes(searchQuery.toLowerCase())
+    event.title?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleDelete = (id) => {
@@ -87,10 +75,16 @@ const MyEvents = () => {
     setDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
-    if (eventToDelete) {
+  const confirmDelete = async () => {
+    if (!eventToDelete) return;
+    try {
+      await organizerService.deleteEvent(eventToDelete);
       setEvents(events.filter((e) => e.id !== eventToDelete));
       toast.success("Event deleted successfully");
+    } catch (err) {
+      console.error("Failed to delete event:", err);
+      toast.error(err.response?.data?.message || "Failed to delete event");
+    } finally {
       setDeleteDialogOpen(false);
       setEventToDelete(null);
     }
@@ -101,13 +95,42 @@ const MyEvents = () => {
       case "approved":
         return <Badge variant="success">Approved</Badge>;
       case "pending":
+      case "pending_approval":
         return <Badge variant="warning">Pending</Badge>;
+      case "live":
+        return <Badge variant="success">Live</Badge>;
+      case "completed":
+        return <Badge variant="secondary">Completed</Badge>;
+      case "cancelled":
+        return <Badge variant="destructive">Cancelled</Badge>;
       case "rejected":
         return <Badge variant="destructive">Rejected</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
   };
+
+  if (loading) {
+    return (
+      <DashboardLayout role="organizer">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout role="organizer">
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+          <AlertCircle className="w-12 h-12 text-destructive" />
+          <p className="text-muted-foreground">{error}</p>
+          <Button onClick={fetchEvents}>Try Again</Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout role="organizer">
@@ -119,7 +142,7 @@ const MyEvents = () => {
             <p className="text-muted-foreground">Manage and track your events</p>
           </div>
           <Button variant="hero" asChild>
-            <Link to="/dashboard/create-event">
+            <Link to="/dashboard/events/create">
               <Plus className="w-4 h-4 mr-2" />
               Create Event
             </Link>
@@ -147,12 +170,21 @@ const MyEvents = () => {
               transition={{ duration: 0.3, delay: index * 0.1 }}
             >
               <Card variant="elevated" className="overflow-hidden group">
-                <div className="relative h-48 overflow-hidden">
-                  <img
-                    src={event.image}
-                    alt={event.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
+                <div className="relative h-48 overflow-hidden bg-secondary">
+                  {event.image ? (
+                    <img
+                      src={event.image}
+                      alt={event.title}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      onError={(e) => {
+                        e.target.src = "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400";
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Calendar className="w-12 h-12 text-muted-foreground" />
+                    </div>
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
                   <div className="absolute top-3 right-3">
                     {getStatusBadge(event.status)}
@@ -167,14 +199,7 @@ const MyEvents = () => {
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Calendar className="w-4 h-4" />
-                      <span>
-                        {new Date(event.date).toLocaleDateString("en-US", {
-                          weekday: "short",
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </span>
+                      <span>{event.date}</span>
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <MapPin className="w-4 h-4" />
@@ -206,7 +231,19 @@ const MyEvents = () => {
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link to={`/dashboard/edit-event/${event.id}`}>
+                          <Link to={`/dashboard/events/${event.id}/attendees`}>
+                            <Users className="w-4 h-4 mr-2" />
+                            Attendees
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to={`/dashboard/events/${event.id}/check-in`}>
+                            <QrCode className="w-4 h-4 mr-2" />
+                            Check-in
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to={`/dashboard/events/${event.id}/edit`}>
                             <Edit className="w-4 h-4 mr-2" />
                             Edit
                           </Link>
@@ -235,7 +272,7 @@ const MyEvents = () => {
               {searchQuery ? "Try a different search term" : "Create your first event to get started"}
             </p>
             <Button variant="hero" asChild>
-              <Link to="/dashboard/create-event">
+              <Link to="/dashboard/events/create">
                 <Plus className="w-4 h-4 mr-2" />
                 Create Event
               </Link>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,19 +16,14 @@ import {
 import { Calendar, MapPin, DollarSign, Users, Image, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-
-const categories = [
-  { id: "1", name: "Technology" },
-  { id: "2", name: "Music" },
-  { id: "3", name: "Art" },
-  { id: "4", name: "Business" },
-  { id: "5", name: "Sports" },
-  { id: "6", name: "Food" },
-];
+import { organizerService } from "@/services/organizerService";
+import { categoryService } from "@/services/publicService";
 
 const CreateEvent = () => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -42,6 +37,23 @@ const CreateEvent = () => {
     imageUrl: "",
   });
 
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const response = await categoryService.getCategories();
+        const list = response.data?.data || response.data || [];
+        setCategories(Array.isArray(list) ? list : []);
+      } catch (err) {
+        console.error("Failed to load categories:", err);
+        toast.error("Failed to load categories");
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    loadCategories();
+  }, []);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -51,12 +63,37 @@ const CreateEvent = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const payload = {
+      title: formData.title,
+      description: formData.description,
+      date: formData.date,
+      end_date: formData.endDate || formData.date,
+      location: formData.location,
+      address: formData.address,
+      capacity: Number(formData.capacity) || 0,
+      image: formData.imageUrl,
+      category_id: formData.categoryId,
+      latitude: null,
+      longitude: null,
+      ticket_types: [
+        {
+          name: "General Admission",
+          price: Number(formData.price || 0),
+          quantity: Number(formData.capacity || 0),
+        },
+      ],
+    };
 
-    toast.success("Event created successfully! It will be reviewed by admin.");
-    navigate("/dashboard/my-events");
-    setIsSubmitting(false);
+    try {
+      await organizerService.createEvent(payload);
+      toast.success("Event created successfully. Awaiting admin approval.");
+      navigate("/dashboard/my-events");
+    } catch (err) {
+      console.error("Failed to create event:", err);
+      toast.error(err.response?.data?.message || "Failed to create event");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -117,13 +154,15 @@ const CreateEvent = () => {
                     onValueChange={(value) =>
                       setFormData((prev) => ({ ...prev, categoryId: value }))
                     }
+                    disabled={loadingCategories}
+                    className="text-foreground"
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
+                      <SelectValue placeholder={loadingCategories ? "Loading..." : "Select a category"} />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent >
                       {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
+                        <SelectItem key={category.id} value={category.id} >
                           {category.name}
                         </SelectItem>
                       ))}

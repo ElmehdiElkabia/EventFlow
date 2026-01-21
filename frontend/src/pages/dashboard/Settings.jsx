@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,18 +8,25 @@ import {
   User,
   Bell,
   Shield,
-  CreditCard,
-  Globe,
-  Moon,
   Mail,
   Smartphone,
   Save,
+  Loader2,
+  AlertCircle,
+  CreditCard,
+  Globe,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { userService } from "@/services/userService";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Settings = () => {
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [profile, setProfile] = useState({ name: '', email: '' });
   const [notifications, setNotifications] = useState({
     email: true,
     push: true,
@@ -28,23 +35,61 @@ const Settings = () => {
     ticketReminders: true,
   });
 
-  const [profile, setProfile] = useState({
-    fullName: "John Doe",
-    email: "john@example.com",
-    phone: "+1 234 567 8900",
-    timezone: "America/New_York",
-  });
+  useEffect(() => {
+    fetchProfile();
+  }, []);
 
-  const handleSaveProfile = () => {
-    toast.success("Profile updated successfully");
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      const response = await userService.getProfile();
+      setProfile(response.data.data || {});
+    } catch (err) {
+      console.error('Failed to fetch profile:', err);
+      toast.error('Failed to load profile');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleSaveNotifications = () => {
-    toast.success("Notification preferences saved");
+  const handleSaveProfile = async () => {
+    try {
+      setSaving(true);
+      await userService.updateProfile({ name: profile.name, email: profile.email });
+      toast.success("Profile updated successfully");
+    } catch (err) {
+      console.error('Failed to update profile:', err);
+      toast.error(err.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
   };
+
+  const handleSaveNotifications = async () => {
+    try {
+      setSaving(true);
+      await userService.updateSettings({ notifications });
+      toast.success("Notification preferences saved");
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+      toast.error(err.response?.data?.message || 'Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
-    <DashboardLayout role="user">
+    <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
         <div>
@@ -94,8 +139,8 @@ const Settings = () => {
                     <div>
                       <label className="text-sm font-medium text-foreground">Full Name</label>
                       <Input
-                        value={profile.fullName}
-                        onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
+                        value={profile.name || ''}
+                        onChange={(e) => setProfile({ ...profile, name: e.target.value })}
                         className="mt-1"
                       />
                     </div>
@@ -103,32 +148,25 @@ const Settings = () => {
                       <label className="text-sm font-medium text-foreground">Email</label>
                       <Input
                         type="email"
-                        value={profile.email}
+                        value={profile.email || ''}
                         onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-foreground">Phone</label>
-                      <Input
-                        value={profile.phone}
-                        onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-foreground">Timezone</label>
-                      <Input
-                        value={profile.timezone}
-                        onChange={(e) => setProfile({ ...profile, timezone: e.target.value })}
                         className="mt-1"
                       />
                     </div>
                   </div>
 
-                  <Button variant="hero" onClick={handleSaveProfile}>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Changes
+                  <Button variant="hero" onClick={handleSaveProfile} disabled={saving}>
+                    {saving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" />
+                        Save Changes
+                      </>
+                    )}
                   </Button>
                 </CardContent>
               </Card>

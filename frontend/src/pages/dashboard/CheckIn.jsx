@@ -1,74 +1,55 @@
-import { useState, useEffect, useRef } from "react";
-import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
+import { toast } from "sonner";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  QrCode,
-  Camera,
-  CheckCircle2,
-  XCircle,
-  Search,
-  Users,
-  Ticket,
-} from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { toast } from "sonner";
+import DashboardLayout from "@/components/DashboardLayout";
+import { attendeeService } from "@/services/attendeeService";
+import { organizerService } from "@/services/organizerService";
 import { Html5QrcodeScanner } from "html5-qrcode";
-
-// Mock data
-const mockEvents = [
-  { id: "1", title: "Tech Innovation Summit 2024", checkedIn: 425, total: 450 },
-  { id: "2", title: "Electronic Music Festival", checkedIn: 2100, total: 2800 },
-  { id: "3", title: "Startup Pitch Competition", checkedIn: 150, total: 180 },
-];
-
-const recentCheckIns = [
-  { id: "1", name: "John Smith", ticket: "TKT-001234", time: "Just now", status: "success" },
-  { id: "2", name: "Sarah Johnson", ticket: "TKT-001235", time: "2 min ago", status: "success" },
-  { id: "3", name: "Mike Davis", ticket: "TKT-001230", time: "5 min ago", status: "already" },
-];
+import { Camera, CheckCircle2, Loader2, QrCode, Search, Ticket, Users } from "lucide-react";
 
 const CheckIn = () => {
-  const [selectedEvent, setSelectedEvent] = useState(mockEvents[0].id);
-  const [scannerActive, setScannerActive] = useState(false);
+  const { id: eventId } = useParams();
+  const [event, setEvent] = useState(null);
+  const [attendees, setAttendees] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [scanning, setScanning] = useState(false);
   const [manualCode, setManualCode] = useState("");
-  const [checkInResult, setCheckInResult] = useState({ status: null, message: "", attendee: "" });
+  const [error, setError] = useState(null);
   const scannerRef = useRef(null);
 
-  const currentEvent = mockEvents.find((e) => e.id === selectedEvent);
-
   useEffect(() => {
-    return () => {
-      if (scannerRef.current) {
-        scannerRef.current.clear().catch(console.error);
-      }
-    };
-  }, []);
+    if (!eventId) {
+      setError("Event not found");
+      setLoading(false);
+      return;
+    }
+    loadData();
+    return () => stopScanner();
+  }, [eventId]);
 
-  const startScanner = () => {
-    setScannerActive(true);
-    setTimeout(() => {
-      try {
-        scannerRef.current = new Html5QrcodeScanner(
-          "qr-reader",
-          { fps: 10, qrbox: { width: 250, height: 250 } },
-          false
-        );
-        scannerRef.current.render(onScanSuccess, onScanFailure);
-      } catch (error) {
-        console.error("Failed to start scanner:", error);
-        toast.error("Failed to start camera. Please check permissions.");
-      }
-    }, 100);
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [eventResponse, attendeeResponse] = await Promise.all([
+        organizerService.getEvent(eventId),
+        attendeeService.getAttendees(eventId),
+      ]);
+      setEvent(eventResponse.data || eventResponse);
+      setAttendees(attendeeResponse.data || attendeeResponse || []);
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load event or attendees");
+      toast.error("Failed to load event or attendees.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const stopScanner = () => {
@@ -76,249 +57,327 @@ const CheckIn = () => {
       scannerRef.current.clear().catch(console.error);
       scannerRef.current = null;
     }
-    setScannerActive(false);
+    setScanning(false);
   };
 
-  const onScanSuccess = (decodedText) => {
-    processCheckIn(decodedText);
-    stopScanner();
-  };
-
-  const onScanFailure = (error) => {
-    // Ignore failures, they happen frequently during scanning
-    console.debug("QR scan failed:", error);
-  };
-
-  const processCheckIn = (code) => {
-    // Simulate check-in process
-    const random = Math.random();
-    if (random > 0.7) {
-      setCheckInResult({
-        status: "already",
-        message: "Ticket already checked in",
-        attendee: "John Smith",
-      });
-      toast.warning("This ticket has already been checked in!");
-    } else if (random > 0.1) {
-      setCheckInResult({
-        status: "success",
-        message: "Check-in successful!",
-        attendee: "Sarah Johnson",
-      });
-      toast.success("Check-in successful!");
-    } else {
-      setCheckInResult({
-        status: "error",
-        message: "Invalid or expired ticket",
-        attendee: "",
-      });
-      toast.error("Invalid ticket code!");
+  const startScanner = () => {
+    if (scannerRef.current) {
+      return;
     }
 
-    setTimeout(() => {
-      setCheckInResult({ status: null, message: "", attendee: "" });
-    }, 3000);
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+    scannerRef.current = new Html5QrcodeScanner(
+      "qr-reader",
+      config,
+      /* verbose */ false
+    );
+
+    scannerRef.current.render(
+      async (decodedText) => {
+        await processCheckIn(decodedText);
+      },
+      (err) => {
+        console.warn(err);
+      }
+    );
+
+    setScanning(true);
   };
 
-  const handleManualCheckIn = (e) => {
+  const processCheckIn = async (code) => {
+    try {
+      const attendee = attendees.find((a) => String(a.id) === String(code));
+
+      if (!attendee) {
+        toast.error("Attendee not found.");
+        return;
+      }
+
+      await attendeeService.checkInAttendee(attendee.id);
+      toast.success(`Checked in ${attendee.name}`);
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      toast.error("Check-in failed.");
+    }
+  };
+
+  const handleManualCheckIn = async (e) => {
     e.preventDefault();
-    if (manualCode.trim()) {
-      processCheckIn(manualCode);
-      setManualCode("");
-    }
+    if (!manualCode) return;
+    await processCheckIn(manualCode);
+    setManualCode("");
   };
+
+  const filteredAttendees = useMemo(() => {
+    if (!searchTerm) return attendees;
+    const term = searchTerm.toLowerCase();
+    return attendees.filter(
+      (a) =>
+        a.name?.toLowerCase().includes(term) ||
+        a.email?.toLowerCase().includes(term) ||
+        String(a.id).includes(term)
+    );
+  }, [attendees, searchTerm]);
+
+  const checkedInCount = attendees.filter((a) => a.status === "checked_in").length;
+  const recentCheckIns = attendees
+    .filter((a) => a.status === "checked_in")
+    .sort((a, b) => new Date(b.checkedInAt) - new Date(a.checkedInAt))
+    .slice(0, 5);
 
   return (
     <DashboardLayout role="organizer">
       <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Check-in</h1>
-          <p className="text-muted-foreground">Scan tickets to check in attendees</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <Link to="/dashboard/my-events" className="hover:underline">
+                My Events
+              </Link>
+              <span>/</span>
+              <span>Check-in</span>
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+              <QrCode className="h-7 w-7" />
+              Check-in
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Scan tickets and manage attendee check-ins for this event.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" asChild>
+              <Link to="/dashboard/my-events">Back to Events</Link>
+            </Button>
+            <Button onClick={loadData} variant="outline">
+              Refresh
+            </Button>
+            <Button onClick={scanning ? stopScanner : startScanner}>
+              {scanning ? "Stop Scanner" : "Start Scanner"}
+            </Button>
+          </div>
         </div>
 
-        {/* Event Selector & Stats */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card variant="elevated">
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span className="ml-2">Loading event and attendees...</span>
+          </div>
+        ) : error ? (
+          <Card>
             <CardHeader>
-              <CardTitle className="text-foreground">Select Event</CardTitle>
+              <CardTitle>Error</CardTitle>
+              <CardDescription>{error}</CardDescription>
             </CardHeader>
             <CardContent>
-              <Select value={selectedEvent} onValueChange={setSelectedEvent}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select an event" />
-                </SelectTrigger>
-                <SelectContent>
-                  {mockEvents.map((event) => (
-                    <SelectItem key={event.id} value={event.id}>
-                      {event.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Button onClick={loadData}>Retry</Button>
             </CardContent>
           </Card>
-
-          <Card variant="elevated">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-                  <CheckCircle2 className="w-6 h-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">
-                    {currentEvent?.checkedIn}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Checked In</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card variant="elevated">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center">
-                  <Ticket className="w-6 h-6 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-foreground">
-                    {currentEvent && currentEvent.total - currentEvent.checkedIn}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Remaining</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Scanner Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card variant="elevated">
+        ) : !event ? (
+          <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-foreground">
-                <QrCode className="w-5 h-5 text-primary" />
-                QR Scanner
-              </CardTitle>
+              <CardTitle>Event not found</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="aspect-square max-w-sm mx-auto rounded-xl overflow-hidden bg-secondary relative">
-                {scannerActive ? (
-                  <div id="qr-reader" className="w-full h-full" />
-                ) : (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <Camera className="w-16 h-16 text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">Camera not active</p>
+          </Card>
+        ) : (
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2 space-y-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>{event.title}</CardTitle>
+                    <CardDescription>
+                      Manage check-ins for {attendees.length} registered attendees.
+                    </CardDescription>
                   </div>
-                )}
-              </div>
-              <div className="flex justify-center">
-                {scannerActive ? (
-                  <Button variant="outline" onClick={stopScanner}>
-                    Stop Scanner
-                  </Button>
-                ) : (
-                  <Button variant="hero" onClick={startScanner}>
-                    <Camera className="w-4 h-4 mr-2" />
-                    Start Scanner
-                  </Button>
-                )}
-              </div>
+                  <Badge variant="outline">{event.status || "live"}</Badge>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-3">
+                    <div className="p-4 rounded-lg border bg-muted/40">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Users className="h-4 w-4" />
+                        Total Attendees
+                      </div>
+                      <div className="text-2xl font-semibold">{attendees.length}</div>
+                    </div>
+                    <div className="p-4 rounded-lg border bg-muted/40">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <CheckCircle2 className="h-4 w-4" />
+                        Checked In
+                      </div>
+                      <div className="text-2xl font-semibold">{checkedInCount}</div>
+                    </div>
+                    <div className="p-4 rounded-lg border bg-muted/40">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Ticket className="h-4 w-4" />
+                        Pending
+                      </div>
+                      <div className="text-2xl font-semibold">
+                        {attendees.length - checkedInCount}
+                      </div>
+                    </div>
+                  </div>
 
-              {/* Manual Entry */}
-              <div className="border-t border-border pt-4">
-                <p className="text-sm text-muted-foreground mb-3">Or enter ticket code manually:</p>
-                <form onSubmit={handleManualCheckIn} className="flex gap-2">
-                  <Input
-                    placeholder="Enter ticket code"
-                    value={manualCode}
-                    onChange={(e) => setManualCode(e.target.value)}
-                  />
-                  <Button type="submit" variant="default">
-                    <Search className="w-4 h-4" />
-                  </Button>
-                </form>
-              </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>QR Scanner</CardTitle>
+                        <CardDescription>Use the camera to scan QR codes.</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="aspect-square rounded-lg border flex items-center justify-center bg-muted/30">
+                          {scanning ? (
+                            <div id="qr-reader" className="w-full h-full" />
+                          ) : (
+                            <div className="text-center space-y-2">
+                              <Camera className="h-10 w-10 mx-auto text-muted-foreground" />
+                              <p className="text-muted-foreground">Scanner is idle</p>
+                              <Button onClick={startScanner}>Start Scanner</Button>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
 
-              {/* Result Feedback */}
-              <AnimatePresence>
-                {checkInResult.status && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    className={`p-4 rounded-xl text-center ${
-                      checkInResult.status === "success"
-                        ? "bg-emerald-500/20 border border-emerald-500/50"
-                        : checkInResult.status === "already"
-                        ? "bg-amber-500/20 border border-amber-500/50"
-                        : "bg-destructive/20 border border-destructive/50"
-                    }`}
-                  >
-                    {checkInResult.status === "success" ? (
-                      <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-2" />
-                    ) : checkInResult.status === "already" ? (
-                      <Users className="w-12 h-12 text-amber-500 mx-auto mb-2" />
-                    ) : (
-                      <XCircle className="w-12 h-12 text-destructive mx-auto mb-2" />
-                    )}
-                    <p className="font-semibold text-foreground">{checkInResult.message}</p>
-                    {checkInResult.attendee && (
-                      <p className="text-muted-foreground">{checkInResult.attendee}</p>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </CardContent>
-          </Card>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Manual Check-in</CardTitle>
+                        <CardDescription>Enter ticket/attendee ID to check in.</CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <form onSubmit={handleManualCheckIn} className="space-y-3">
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Enter attendee ID"
+                              value={manualCode}
+                              onChange={(e) => setManualCode(e.target.value)}
+                            />
+                            <Button type="submit">Check-in</Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Tip: IDs are the numbers on attendee rows; QR codes should encode the same.
+                          </p>
+                        </form>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </CardContent>
+              </Card>
 
-          {/* Recent Check-ins */}
-          <Card variant="elevated">
-            <CardHeader>
-              <CardTitle className="text-foreground">Recent Check-ins</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {recentCheckIns.map((checkIn) => (
-                  <motion.div
-                    key={checkIn.id}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="flex items-center justify-between p-4 rounded-xl bg-secondary/50"
-                  >
-                    <div className="flex items-center gap-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Attendees</CardTitle>
+                  <CardDescription>Search and confirm check-ins.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="relative mb-4">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by name or email"
+                      className="pl-9"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    {filteredAttendees.map((attendee) => (
                       <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          checkIn.status === "success"
-                            ? "bg-emerald-500/20"
-                            : "bg-amber-500/20"
-                        }`}
+                        key={attendee.id}
+                        className="flex items-center justify-between p-4 rounded-lg border"
                       >
-                        {checkIn.status === "success" ? (
-                          <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                        ) : (
-                          <Users className="w-5 h-5 text-amber-500" />
-                        )}
+                        <div>
+                          <div className="font-medium">{attendee.name}</div>
+                          <div className="text-sm text-muted-foreground">{attendee.email}</div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge
+                            variant={
+                              attendee.status === "checked_in" ? "default" : "secondary"
+                            }
+                          >
+                            {attendee.status === "checked_in" ? "Checked in" : "Pending"}
+                          </Badge>
+                          {attendee.status !== "checked_in" && (
+                            <Button
+                              size="sm"
+                              onClick={() => processCheckIn(attendee.id)}
+                              className="flex items-center gap-1"
+                            >
+                              <CheckCircle2 className="h-4 w-4" />
+                              Check-in
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-foreground">{checkIn.name}</p>
-                        <p className="text-sm text-muted-foreground">{checkIn.ticket}</p>
+                    ))}
+
+                    {filteredAttendees.length === 0 && (
+                      <div className="text-center text-muted-foreground py-6">
+                        No attendees found.
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <Badge
-                        variant={checkIn.status === "success" ? "success" : "warning"}
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Check-ins</CardTitle>
+                  <CardDescription>Latest confirmed attendees.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <AnimatePresence>
+                    {recentCheckIns.map((attendee) => (
+                      <motion.div
+                        key={attendee.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="flex items-center justify-between p-3 rounded-lg border"
                       >
-                        {checkIn.status === "success" ? "Checked In" : "Duplicate"}
-                      </Badge>
-                      <p className="text-xs text-muted-foreground mt-1">{checkIn.time}</p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                        <div>
+                          <div className="font-medium">{attendee.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {attendee.checkedInAt || "Just now"}
+                          </div>
+                        </div>
+                        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                  {recentCheckIns.length === 0 && (
+                    <p className="text-sm text-muted-foreground">No check-ins yet.</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Event Info</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm text-muted-foreground">
+                  <div className="flex items-center justify-between">
+                    <span>Date</span>
+                    <span>{event.start_date || event.date || "TBD"}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Location</span>
+                    <span>{event.location || "TBD"}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Status</span>
+                    <Badge variant="outline">{event.status || "live"}</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   );

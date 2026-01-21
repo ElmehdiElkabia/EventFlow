@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,88 +29,61 @@ import {
   Users,
 } from "lucide-react";
 import { motion } from "framer-motion";
-
-// Mock data
-const mockEvents = [
-  { id: "all", title: "All Events" },
-  { id: "1", title: "Tech Innovation Summit 2024" },
-  { id: "2", title: "Electronic Music Festival" },
-  { id: "3", title: "Startup Pitch Competition" },
-];
-
-const mockAttendees = [
-  {
-    id: "1",
-    name: "John Smith",
-    email: "john.smith@example.com",
-    ticketCode: "TKT-001234",
-    event: "Tech Innovation Summit 2024",
-    purchaseDate: "2024-11-15",
-    status: "checked_in",
-    checkedInAt: "2024-12-15T10:15:00",
-  },
-  {
-    id: "2",
-    name: "Sarah Johnson",
-    email: "sarah.j@example.com",
-    ticketCode: "TKT-001235",
-    event: "Tech Innovation Summit 2024",
-    purchaseDate: "2024-11-20",
-    status: "checked_in",
-    checkedInAt: "2024-12-15T10:30:00",
-  },
-  {
-    id: "3",
-    name: "Mike Davis",
-    email: "mike.d@example.com",
-    ticketCode: "TKT-001236",
-    event: "Electronic Music Festival",
-    purchaseDate: "2024-11-18",
-    status: "pending",
-    checkedInAt: null,
-  },
-  {
-    id: "4",
-    name: "Emily Brown",
-    email: "emily.b@example.com",
-    ticketCode: "TKT-001237",
-    event: "Electronic Music Festival",
-    purchaseDate: "2024-11-22",
-    status: "pending",
-    checkedInAt: null,
-  },
-  {
-    id: "5",
-    name: "David Wilson",
-    email: "david.w@example.com",
-    ticketCode: "TKT-001238",
-    event: "Startup Pitch Competition",
-    purchaseDate: "2024-11-25",
-    status: "checked_in",
-    checkedInAt: "2024-12-18T14:05:00",
-  },
-];
+import { attendeeService } from "@/services/attendeeService";
+import { organizerService } from "@/services/organizerService";
+import { toast } from "sonner";
 
 const Attendees = () => {
-  const [selectedEvent, setSelectedEvent] = useState("all");
+  const { id: eventId } = useParams();
+  const navigate = useNavigate();
+  const [attendees, setAttendees] = useState([]);
+  const [event, setEvent] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const filteredAttendees = mockAttendees.filter((attendee) => {
-    const matchesEvent = selectedEvent === "all" || attendee.event === mockEvents.find(e => e.id === selectedEvent)?.title;
-    const matchesSearch =
-      attendee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      attendee.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      attendee.ticketCode.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || attendee.status === statusFilter;
-    return matchesEvent && matchesSearch && matchesStatus;
-  });
+  useEffect(() => {
+    if (!eventId) return;
+    loadData();
+  }, [eventId]);
 
-  const stats = {
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [eventRes, attendeesRes] = await Promise.all([
+        organizerService.getEvent(eventId),
+        attendeeService.getAttendees(eventId),
+      ]);
+
+      setEvent(eventRes.data || eventRes);
+      setAttendees(attendeesRes || []);
+    } catch (err) {
+      console.error("Failed to load attendees:", err);
+      setError(err.response?.data?.message || "Failed to load attendees");
+      toast.error(err.response?.data?.message || "Failed to load attendees");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredAttendees = useMemo(() => {
+    return attendees.filter((attendee) => {
+      const matchesSearch =
+        attendee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        attendee.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        attendee.ticketCode.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === "all" || attendee.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [attendees, searchQuery, statusFilter]);
+
+  const stats = useMemo(() => ({
     total: filteredAttendees.length,
     checkedIn: filteredAttendees.filter((a) => a.status === "checked_in").length,
-    pending: filteredAttendees.filter((a) => a.status === "pending").length,
-  };
+    pending: filteredAttendees.filter((a) => a.status !== "checked_in").length,
+  }), [filteredAttendees]);
 
   return (
     <DashboardLayout role="organizer">
@@ -118,16 +92,13 @@ const Attendees = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Attendees</h1>
-            <p className="text-muted-foreground">Manage your event attendees</p>
+            <p className="text-muted-foreground">{event?.title ? `Manage attendees for ${event.title}` : "Manage your event attendees"}</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline">
-              <Mail className="w-4 h-4 mr-2" />
-              Send Email
-            </Button>
-            <Button variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              Export
+            <Button variant="outline" asChild>
+              <Link to="/dashboard/my-events">
+                Back to events
+              </Link>
             </Button>
           </div>
         </div>
@@ -207,18 +178,6 @@ const Attendees = () => {
                   className="pl-10"
                 />
               </div>
-              <Select value={selectedEvent} onValueChange={setSelectedEvent}>
-                <SelectTrigger className="w-full sm:w-64">
-                  <SelectValue placeholder="Select event" />
-                </SelectTrigger>
-                <SelectContent>
-                  {mockEvents.map((event) => (
-                    <SelectItem key={event.id} value={event.id}>
-                      {event.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full sm:w-40">
                   <SelectValue placeholder="Status" />
@@ -234,70 +193,81 @@ const Attendees = () => {
         </Card>
 
         {/* Attendees Table */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card variant="elevated">
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Attendee</TableHead>
-                      <TableHead>Ticket Code</TableHead>
-                      <TableHead>Event</TableHead>
-                      <TableHead>Purchase Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Checked In</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAttendees.map((attendee) => (
-                      <TableRow key={attendee.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium text-foreground">{attendee.name}</p>
-                            <p className="text-sm text-muted-foreground">{attendee.email}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {attendee.ticketCode}
-                        </TableCell>
-                        <TableCell>{attendee.event}</TableCell>
-                        <TableCell>
-                          {new Date(attendee.purchaseDate).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={attendee.status === "checked_in" ? "success" : "warning"}
-                          >
-                            {attendee.status === "checked_in" ? "Checked In" : "Pending"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {attendee.checkedInAt
-                            ? new Date(attendee.checkedInAt).toLocaleTimeString()
-                            : "-"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              {filteredAttendees.length === 0 && (
-                <div className="p-12 text-center">
-                  <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-xl font-semibold text-foreground mb-2">No attendees found</h3>
-                  <p className="text-muted-foreground">
-                    Try adjusting your search or filter criteria
-                  </p>
-                </div>
-              )}
-            </CardContent>
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : error ? (
+          <Card variant="elevated" className="p-8 text-center">
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={loadData}>Retry</Button>
           </Card>
-        </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Card variant="elevated">
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Attendee</TableHead>
+                        <TableHead>Ticket Code</TableHead>
+                        <TableHead>Event</TableHead>
+                        <TableHead>Purchase Date</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Checked In</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredAttendees.map((attendee) => (
+                        <TableRow key={attendee.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium text-foreground">{attendee.name}</p>
+                              <p className="text-sm text-muted-foreground">{attendee.email}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">
+                            {attendee.ticketCode}
+                          </TableCell>
+                          <TableCell>{attendee.event}</TableCell>
+                          <TableCell>
+                            {new Date(attendee.purchaseDate).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={attendee.status === "checked_in" ? "success" : "warning"}
+                            >
+                              {attendee.status === "checked_in" ? "Checked In" : "Pending"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {attendee.checkedInAt
+                              ? new Date(attendee.checkedInAt).toLocaleTimeString()
+                              : "-"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                {filteredAttendees.length === 0 && (
+                  <div className="p-12 text-center">
+                    <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-foreground mb-2">No attendees found</h3>
+                    <p className="text-muted-foreground">
+                      Try adjusting your search or filter criteria
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
       </div>
     </DashboardLayout>
   );

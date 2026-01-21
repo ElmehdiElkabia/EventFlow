@@ -13,45 +13,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, MapPin, DollarSign, Users, Image, ArrowLeft } from "lucide-react";
+import { Calendar, MapPin, DollarSign, Users, Image, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-
-const categories = [
-  { id: "1", name: "Technology" },
-  { id: "2", name: "Music" },
-  { id: "3", name: "Art" },
-  { id: "4", name: "Business" },
-  { id: "5", name: "Sports" },
-  { id: "6", name: "Food" },
-];
-
-// Mock event data
-const mockEvent = {
-  id: "1",
-  title: "Tech Innovation Summit 2024",
-  description: "Join us for the biggest tech conference of the year featuring top speakers, workshops, and networking opportunities.",
-  date: "2024-12-15T10:00",
-  endDate: "2024-12-15T18:00",
-  location: "Moscone Center",
-  address: "747 Howard St, San Francisco, CA 94103",
-  capacity: "500",
-  price: "299",
-  categoryId: "1",
-  imageUrl: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800",
-};
+import { organizerService } from "@/services/organizerService";
+import { categoryService } from "@/services/publicService";
 
 const EditEvent = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     date: "",
     endDate: "",
     location: "",
-    address: "",
     capacity: "",
     price: "",
     categoryId: "",
@@ -59,9 +40,48 @@ const EditEvent = () => {
   });
 
   useEffect(() => {
-    // Simulate fetching event data
-    setFormData(mockEvent);
+    fetchEvent();
+    loadCategories();
   }, [id]);
+
+  const fetchEvent = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await organizerService.getEvent(id);
+      const event = response.data.data;
+      setFormData({
+        title: event.title || "",
+        description: event.description || "",
+        date: event.start_date ? event.start_date.replace(' ', 'T') : "",
+        endDate: event.end_date ? event.end_date.replace(' ', 'T') : "",
+        location: event.location || "",
+        capacity: String(event.capacity) || "",
+        price: String(event.price || 0),
+        categoryId: String(event.category_id) || "",
+        imageUrl: event.image_url || "",
+      });
+    } catch (err) {
+      console.error("Failed to fetch event:", err);
+      setError(err.response?.data?.message || "Failed to load event");
+      toast.error("Failed to load event");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadCategories = async () => {
+    try {
+      const response = await categoryService.getCategories();
+      const list = response.data?.data || response.data || [];
+      setCategories(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error("Failed to load categories:", err);
+      toast.error("Failed to load categories");
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -72,13 +92,52 @@ const EditEvent = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const payload = {
+      title: formData.title,
+      description: formData.description,
+      date: formData.date,
+      end_date: formData.endDate || formData.date,
+      location: formData.location,
+      capacity: Number(formData.capacity) || 0,
+      image: formData.imageUrl,
+      category_id: formData.categoryId,
+      latitude: null,
+      longitude: null,
+    };
 
-    toast.success("Event updated successfully!");
-    navigate("/dashboard/my-events");
-    setIsSubmitting(false);
+    try {
+      await organizerService.updateEvent(id, payload);
+      toast.success("Event updated successfully!");
+      navigate("/dashboard/my-events");
+    } catch (err) {
+      console.error("Failed to update event:", err);
+      toast.error(err.response?.data?.message || "Failed to update event");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <DashboardLayout role="organizer">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout role="organizer">
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+          <AlertCircle className="w-12 h-12 text-destructive" />
+          <p className="text-muted-foreground">{error}</p>
+          <Button onClick={fetchEvent}>Try Again</Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout role="organizer">
@@ -138,13 +197,14 @@ const EditEvent = () => {
                     onValueChange={(value) =>
                       setFormData((prev) => ({ ...prev, categoryId: value }))
                     }
+                    disabled={loadingCategories}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
+                      <SelectValue placeholder={loadingCategories ? "Loading..." : "Select a category"} />
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
+                        <SelectItem key={category.id} value={String(category.id)}>
                           {category.name}
                         </SelectItem>
                       ))}

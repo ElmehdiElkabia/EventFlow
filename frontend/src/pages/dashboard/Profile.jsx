@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,43 +8,109 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   User,
   Mail,
-  Phone,
-  MapPin,
   Calendar,
   Edit,
   Save,
-  Camera,
   Ticket,
   Star,
-  Award,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { userService, ticketService } from "@/services/userService";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Profile = () => {
+  const { user: authUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
   const [profile, setProfile] = useState({
-    fullName: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+1 234 567 8900",
-    location: "San Francisco, CA",
-    bio: "Event enthusiast and tech lover. Always looking for the next great experience!",
-    joinedDate: "December 2023",
+    name: "",
+    email: "",
+    role: "",
+    created_at: "",
   });
+  const [tickets, setTickets] = useState([]);
+  const [reviews, setReviews] = useState([]);
 
-  const stats = [
-    { label: "Events Attended", value: 24, icon: Ticket },
-    { label: "Reviews Written", value: 18, icon: Star },
-    { label: "Badges Earned", value: 5, icon: Award },
-  ];
 
-  const handleSave = () => {
-    setIsEditing(false);
-    toast.success("Profile updated successfully");
+  useEffect(() => {
+    fetchProfileData();
+  }, []);
+
+  const fetchProfileData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [profileRes, ticketsRes, reviewsRes] = await Promise.all([
+        userService.getProfile(),
+        ticketService.getMyTickets(),
+        userService.getReviews(),
+      ]);
+
+      setProfile(profileRes.data.data || {});
+      setTickets(ticketsRes.data.data || []);
+      setReviews(reviewsRes.data.data || []);
+    } catch (err) {
+      console.error('Failed to fetch profile:', err);
+      setError(err.response?.data?.message || 'Failed to load profile');
+      toast.error('Failed to load profile');
+    } finally {
+      setLoading(false);
+    }
   };
 
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      await userService.updateProfile({
+        name: profile.name,
+        email: profile.email,
+      });
+      
+      setIsEditing(false);
+      toast.success("Profile updated successfully");
+    } catch (err) {
+      console.error('Failed to update profile:', err);
+      toast.error(err.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const stats = [
+    { label: "Events Attended", value: tickets.length, icon: Ticket },
+    { label: "Reviews Written", value: reviews.length, icon: Star },
+  ];
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+          <AlertCircle className="w-12 h-12 text-destructive" />
+          <p className="text-muted-foreground">{error}</p>
+          <Button onClick={fetchProfileData}>Try Again</Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
-    <DashboardLayout role="user">
+    <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
         <div>
@@ -70,9 +136,23 @@ const Profile = () => {
                       Edit
                     </Button>
                   ) : (
-                    <Button variant="hero" size="sm" onClick={handleSave}>
-                      <Save className="w-4 h-4 mr-2" />
-                      Save
+                    <Button 
+                      variant="hero" 
+                      size="sm" 
+                      onClick={handleSave}
+                      disabled={saving}
+                    >
+                      {saving ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Saving
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4 mr-2" />
+                          Save
+                        </>
+                      )}
                     </Button>
                   )}
                 </div>
@@ -82,19 +162,16 @@ const Profile = () => {
                 <div className="flex items-center gap-6">
                   <div className="relative">
                     <div className="w-24 h-24 rounded-full bg-gradient-primary flex items-center justify-center">
-                      <span className="text-3xl font-bold text-primary-foreground">JD</span>
+                      <span className="text-3xl font-bold text-primary-foreground">
+                        {profile.name?.charAt(0)?.toUpperCase() || 'U'}
+                      </span>
                     </div>
-                    {isEditing && (
-                      <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-secondary border border-border flex items-center justify-center hover:bg-secondary/80">
-                        <Camera className="w-4 h-4 text-muted-foreground" />
-                      </button>
-                    )}
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-foreground">{profile.fullName}</h3>
-                    <p className="text-muted-foreground">Member since {profile.joinedDate}</p>
-                    <Badge variant="outline" className="mt-2">
-                      Verified Account
+                    <h3 className="text-xl font-semibold text-foreground">{profile.name}</h3>
+                    <p className="text-muted-foreground">Member since {profile.created_at}</p>
+                    <Badge variant="outline" className="mt-2 capitalize">
+                      {profile.role}
                     </Badge>
                   </div>
                 </div>
@@ -108,12 +185,12 @@ const Profile = () => {
                     </label>
                     {isEditing ? (
                       <Input
-                        value={profile.fullName}
-                        onChange={(e) => setProfile({ ...profile, fullName: e.target.value })}
+                        value={profile.name}
+                        onChange={(e) => setProfile({ ...profile, name: e.target.value })}
                         className="mt-1"
                       />
                     ) : (
-                      <p className="mt-1 text-foreground">{profile.fullName}</p>
+                      <p className="mt-1 text-foreground">{profile.name}</p>
                     )}
                   </div>
 
@@ -136,49 +213,19 @@ const Profile = () => {
 
                   <div>
                     <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                      <Phone className="w-4 h-4 text-muted-foreground" />
-                      Phone
+                      <Calendar className="w-4 h-4 text-muted-foreground" />
+                      Member Since
                     </label>
-                    {isEditing ? (
-                      <Input
-                        value={profile.phone}
-                        onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                        className="mt-1"
-                      />
-                    ) : (
-                      <p className="mt-1 text-foreground">{profile.phone}</p>
-                    )}
+                    <p className="mt-1 text-foreground">{profile.created_at}</p>
                   </div>
 
                   <div>
                     <label className="text-sm font-medium text-foreground flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-muted-foreground" />
-                      Location
+                      <User className="w-4 h-4 text-muted-foreground" />
+                      Role
                     </label>
-                    {isEditing ? (
-                      <Input
-                        value={profile.location}
-                        onChange={(e) => setProfile({ ...profile, location: e.target.value })}
-                        className="mt-1"
-                      />
-                    ) : (
-                      <p className="mt-1 text-foreground">{profile.location}</p>
-                    )}
+                    <p className="mt-1 text-foreground capitalize">{profile.role}</p>
                   </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-foreground">Bio</label>
-                  {isEditing ? (
-                    <Textarea
-                      value={profile.bio}
-                      onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
-                      className="mt-1"
-                      rows={3}
-                    />
-                  ) : (
-                    <p className="mt-1 text-muted-foreground">{profile.bio}</p>
-                  )}
                 </div>
               </CardContent>
             </Card>
