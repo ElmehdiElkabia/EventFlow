@@ -20,11 +20,12 @@ const MyTickets = () => {
         setLoading(true);
         setError(null);
         const response = await ticketService.getMyTickets();
-        setTickets(response.data || []);
+        setTickets(response?.data || []);
       } catch (err) {
         console.error('Error fetching tickets:', err);
-        setError(err.response?.data?.message || 'Failed to load tickets');
-        toast.error('Failed to load your tickets');
+        const errorMsg = err.response?.data?.message || 'Failed to load tickets';
+        setError(errorMsg);
+        toast.error(errorMsg);
       } finally {
         setLoading(false);
       }
@@ -35,7 +36,7 @@ const MyTickets = () => {
 
   if (loading) {
     return (
-      <DashboardLayout role="user">
+      <DashboardLayout role="attendee">
         <div className="space-y-8">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">My Tickets</h1>
@@ -53,7 +54,7 @@ const MyTickets = () => {
 
   if (error) {
     return (
-      <DashboardLayout role="user">
+      <DashboardLayout role="attendee">
         <div className="space-y-8">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">My Tickets</h1>
@@ -72,7 +73,7 @@ const MyTickets = () => {
     );
   }
   return (
-    <DashboardLayout role="user">
+    <DashboardLayout role="attendee">
       <div className="space-y-8">
         {/* Header */}
         <div>
@@ -98,16 +99,16 @@ const MyTickets = () => {
                     <div className="flex items-start justify-between mb-4">
                       <div>
                         <Badge
-                          variant={ticket.status === "active" ? "success" : "outline"}
+                          variant={ticket.status === "valid" ? "success" : "outline"}
                           className="mb-2"
                         >
-                          {ticket.status}
+                          {ticket.status === "valid" ? "Active" : ticket.status}
                         </Badge>
                         <h3 className="text-xl font-semibold text-foreground">
                           {ticket.eventTitle}
                         </h3>
                       </div>
-                      <p className="text-sm text-muted-foreground">{ticket.id}</p>
+                      <p className="text-sm text-muted-foreground">#{ticket.id}</p>
                     </div>
 
                     <div className="grid sm:grid-cols-2 gap-4 mb-4">
@@ -140,7 +141,9 @@ const MyTickets = () => {
                       </div>
                       <div className="text-right">
                         <p className="text-sm text-muted-foreground">Price</p>
-                        <p className="font-semibold text-primary text-lg">{ticket.price}</p>
+                        <p className="font-semibold text-primary text-lg">
+                          ${typeof ticket.price === 'number' ? ticket.price.toFixed(2) : ticket.price}
+                        </p>
                       </div>
                     </div>
                   </div>
