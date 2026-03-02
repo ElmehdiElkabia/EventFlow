@@ -27,18 +27,19 @@ const UserTickets = () => {
       setLoading(true);
       setError(null);
       const response = await ticketService.getMyTickets();
-      setTickets(response.data.data || []);
+      setTickets(response || []);
     } catch (err) {
       console.error("Failed to fetch tickets:", err);
-      setError(err.response?.data?.message || "Failed to load tickets");
-      toast.error("Failed to load tickets");
+      const errorMsg = err.response?.data?.message || "Failed to load tickets";
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
   };
 
   const upcomingTickets = tickets.filter((t) => t.status === "valid");
-  const pastTickets = tickets.filter((t) => t.status === "used");
+  const pastTickets = tickets.filter((t) => t.status === "used" || t.status === "expired");
 
   const openQRCode = (ticket) => {
     setSelectedTicket(ticket);
