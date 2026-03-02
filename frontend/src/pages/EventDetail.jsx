@@ -21,15 +21,19 @@ import {
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { eventService } from "@/services/publicService";
+import { ticketService } from "@/services/userService";
+import { useAuth } from "@/contexts/AuthContext";
 
 const EventDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [eventData, setEventData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [ticketCount, setTicketCount] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [purchasing, setPurchasing] = useState(false);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -99,9 +103,55 @@ const EventDetail = () => {
     toast.success(isWishlisted ? "Removed from wishlist" : "Added to wishlist");
   };
 
-  const handleBuyTickets = () => {
-    toast.success("Redirecting to checkout...");
-    // TODO: Implement checkout flow
+  const handleBuyTickets = async () => {
+    // Check authentication
+    if (!isAuthenticated) {
+      toast.error("Please login to purchase tickets");
+      navigate('/login', { state: { from: `/events/${id}` } });
+      return;
+    }
+
+    // Validate ticket types
+    if (!eventData.ticketTypes || eventData.ticketTypes.length === 0) {
+      toast.error("No ticket types available for this event");
+      return;
+    }
+
+    // Check availability
+    if (spotsLeft < ticketCount) {
+      toast.error(`Only ${spotsLeft} tickets remaining`);
+      return;
+    }
+
+    try {
+      setPurchasing(true);
+      
+      const ticketType = eventData.ticketTypes[0];
+      const purchaseData = {
+        event_id: parseInt(id),
+        ticket_type_id: ticketType.id,
+        quantity: ticketCount,
+        amount: totalPrice,
+      };
+
+      const response = await ticketService.buyTicket(purchaseData);
+      
+      toast.success(`Successfully purchased ${ticketCount} ticket${ticketCount > 1 ? 's' : ''}!`, {
+        description: `Transaction ID: ${response.data?.transaction_id || 'N/A'}`,
+      });
+      
+      // Redirect to tickets page after a short delay
+      setTimeout(() => {
+        navigate('/my-tickets');
+      }, 1500);
+      
+    } catch (err) {
+      console.error('Failed to purchase tickets:', err);
+      const errorMsg = err.response?.data?.message || 'Failed to purchase tickets';
+      toast.error(errorMsg);
+    } finally {
+      setPurchasing(false);
+    }
   };
 
   return (
@@ -309,9 +359,21 @@ const EventDetail = () => {
                       size="lg"
                       className="w-full"
                       onClick={handleBuyTickets}
+                      disabled={purchasing || spotsLeft <= 0}
                     >
-                      <Ticket className="w-5 h-5 mr-2" />
-                      Get Tickets
+                      {purchasing ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : spotsLeft <= 0 ? (
+                        "Sold Out"
+                      ) : (
+                        <>
+                          <Ticket className="w-5 h-5 mr-2" />
+                          Get Tickets
+                        </>
+                      )}
                     </Button>
 
                     <p className="text-xs text-muted-foreground text-center mt-4">
