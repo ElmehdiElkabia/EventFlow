@@ -23,11 +23,12 @@ const MyReviews = () => {
       setLoading(true);
       setError(null);
       const response = await userService.getReviews();
-      setReviews(response.data.data || []);
+      setReviews(response?.data || []);
     } catch (err) {
       console.error("Failed to fetch reviews:", err);
-      setError(err.response?.data?.message || "Failed to load reviews");
-      toast.error("Failed to load reviews");
+      const errorMsg = err.response?.data?.message || "Failed to load reviews";
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
