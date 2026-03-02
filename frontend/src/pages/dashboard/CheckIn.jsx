@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import DashboardLayout from "@/components/DashboardLayout";
 import { attendeeService } from "@/services/attendeeService";
-import { organizerService } from "@/services/organizerService";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import { Camera, CheckCircle2, Loader2, QrCode, Search, Ticket, Users } from "lucide-react";
 
@@ -36,17 +35,21 @@ const CheckIn = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [eventResponse, attendeeResponse] = await Promise.all([
-        organizerService.getEvent(eventId),
-        attendeeService.getAttendees(eventId),
-      ]);
-      setEvent(eventResponse.data || eventResponse);
-      setAttendees(attendeeResponse.data || attendeeResponse || []);
+      const attendeeResponse = await attendeeService.getAttendees(eventId);
+      const attendeeData = attendeeResponse || [];
+      setAttendees(attendeeData);
+      // Extract event info from first attendee's event object
+      if (attendeeData.length > 0 && attendeeData[0].event) {
+        setEvent(attendeeData[0].event);
+      } else {
+        setEvent(null);
+      }
       setError(null);
     } catch (err) {
       console.error(err);
-      setError("Failed to load event or attendees");
-      toast.error("Failed to load event or attendees.");
+      const errorMsg = err.response?.data?.message || "Failed to load attendees";
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -98,7 +101,8 @@ const CheckIn = () => {
       await loadData();
     } catch (err) {
       console.error(err);
-      toast.error("Check-in failed.");
+      const errorMsg = err.response?.data?.message || "Check-in failed.";
+      toast.error(errorMsg);
     }
   };
 
@@ -186,12 +190,12 @@ const CheckIn = () => {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
-                    <CardTitle>{event.title}</CardTitle>
+                    <CardTitle>{event?.title || "Event"}</CardTitle>
                     <CardDescription>
                       Manage check-ins for {attendees.length} registered attendees.
                     </CardDescription>
                   </div>
-                  <Badge variant="outline">{event.status || "live"}</Badge>
+                  <Badge variant="outline">{event?.status || "live"}</Badge>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid gap-4 md:grid-cols-3">
@@ -363,15 +367,15 @@ const CheckIn = () => {
                 <CardContent className="space-y-2 text-sm text-muted-foreground">
                   <div className="flex items-center justify-between">
                     <span>Date</span>
-                    <span>{event.start_date || event.date || "TBD"}</span>
+                    <span>{event?.start_date || event?.date || "TBD"}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Location</span>
-                    <span>{event.location || "TBD"}</span>
+                    <span>{event?.location || "TBD"}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Status</span>
-                    <Badge variant="outline">{event.status || "live"}</Badge>
+                    <Badge variant="outline">{event?.status || "live"}</Badge>
                   </div>
                 </CardContent>
               </Card>
