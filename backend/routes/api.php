@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\Admin\AdminEventController;
 use App\Http\Controllers\Api\Admin\AdminUserController;
 use App\Http\Controllers\Api\Admin\AdminCategoryController;
 use App\Http\Controllers\Api\Admin\AdminAnalyticsController;
+use App\Http\Controllers\Api\Admin\AdminTransactionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -58,6 +59,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Events management
         Route::post('/events', [OrganizerEventController::class, 'store']);
         Route::get('/events', [OrganizerEventController::class, 'index']);
+        Route::get('/events/{id}', [OrganizerEventController::class, 'show']);
         Route::patch('/events/{id}', [OrganizerEventController::class, 'update']);
         Route::delete('/events/{id}', [OrganizerEventController::class, 'destroy']);
         
@@ -117,5 +119,9 @@ Route::middleware('auth:sanctum')->group(function () {
         
         // Analytics
         Route::get('/analytics', [AdminAnalyticsController::class, 'index']);
+        
+        // Transactions
+        Route::get('/transactions', [AdminTransactionController::class, 'index']);
+        Route::get('/transactions/stats', [AdminTransactionController::class, 'stats']);
     });
 });
