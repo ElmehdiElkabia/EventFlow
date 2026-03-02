@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, MapPin, DollarSign, Users, Image, ArrowLeft } from "lucide-react";
+import { Calendar, MapPin, DollarSign, Users, Image, ArrowLeft, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { organizerService } from "@/services/organizerService";
@@ -24,6 +24,7 @@ const CreateEvent = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
+  const [categoryError, setCategoryError] = useState(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -40,11 +41,13 @@ const CreateEvent = () => {
   useEffect(() => {
     const loadCategories = async () => {
       try {
+        setLoadingCategories(true);
+        setCategoryError(null);
         const response = await categoryService.getCategories();
-        const list = response.data?.data || response.data || [];
-        setCategories(Array.isArray(list) ? list : []);
+        setCategories(response.data || []);
       } catch (err) {
         console.error("Failed to load categories:", err);
+        setCategoryError(err.response?.data?.message || "Failed to load categories");
         toast.error("Failed to load categories");
       } finally {
         setLoadingCategories(false);
@@ -61,6 +64,13 @@ const CreateEvent = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate category selection
+    if (!formData.categoryId) {
+      toast.error("Please select a category");
+      return;
+    }
+
     setIsSubmitting(true);
 
     const payload = {
@@ -72,7 +82,7 @@ const CreateEvent = () => {
       address: formData.address,
       capacity: Number(formData.capacity) || 0,
       image: formData.imageUrl,
-      category_id: formData.categoryId,
+      category_id: Number(formData.categoryId),
       latitude: null,
       longitude: null,
       ticket_types: [
@@ -149,20 +159,23 @@ const CreateEvent = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="categoryId">Category *</Label>
+                  {categoryError ? (
+                    <div className="text-sm text-destructive">{categoryError}</div>
+                  ) : null}
                   <Select
                     value={formData.categoryId}
                     onValueChange={(value) =>
                       setFormData((prev) => ({ ...prev, categoryId: value }))
                     }
-                    disabled={loadingCategories}
-                    className="text-foreground"
+                    disabled={loadingCategories || !!categoryError}
+                    required
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={loadingCategories ? "Loading..." : "Select a category"} />
+                      <SelectValue placeholder={loadingCategories ? "Loading..." : categoryError ? "Failed to load categories" : "Select a category"} />
                     </SelectTrigger>
-                    <SelectContent >
+                    <SelectContent>
                       {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id} >
+                        <SelectItem key={category.id} value={String(category.id)}>
                           {category.name}
                         </SelectItem>
                       ))}
@@ -329,11 +342,19 @@ const CreateEvent = () => {
                 type="button"
                 variant="outline"
                 onClick={() => navigate(-1)}
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>
               <Button type="submit" variant="hero" disabled={isSubmitting}>
-                {isSubmitting ? "Creating..." : "Create Event"}
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Event"
+                )}
               </Button>
             </div>
           </motion.div>
