@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,73 +34,55 @@ import {
   Mail,
   Ban,
   UserCheck,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-
-// Mock users data
-const mockUsers = [
-  {
-    id: "1",
-    name: "John Doe",
-    email: "john.doe@example.com",
-    role: "organizer",
-    status: "active",
-    eventsCreated: 5,
-    ticketsPurchased: 12,
-    joinedAt: "2024-01-15",
-  },
-  {
-    id: "2",
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    role: "user",
-    status: "active",
-    eventsCreated: 0,
-    ticketsPurchased: 8,
-    joinedAt: "2024-02-20",
-  },
-  {
-    id: "3",
-    name: "Mike Johnson",
-    email: "mike.j@example.com",
-    role: "organizer",
-    status: "active",
-    eventsCreated: 3,
-    ticketsPurchased: 2,
-    joinedAt: "2024-03-10",
-  },
-  {
-    id: "4",
-    name: "Sarah Davis",
-    email: "sarah.d@example.com",
-    role: "user",
-    status: "suspended",
-    eventsCreated: 0,
-    ticketsPurchased: 0,
-    joinedAt: "2024-04-05",
-  },
-  {
-    id: "5",
-    name: "Admin User",
-    email: "admin@eventflow.com",
-    role: "admin",
-    status: "active",
-    eventsCreated: 0,
-    ticketsPurchased: 0,
-    joinedAt: "2024-01-01",
-  },
-];
+import adminService from "@/services/adminService";
 
 const AdminUsers = () => {
-  const [users, setUsers] = useState(mockUsers);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [actionLoading, setActionLoading] = useState(false);
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await adminService.getUsers();
+      // Map backend data to frontend format
+      const mappedUsers = (data || []).map(user => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role === 'attendee' ? 'user' : user.role, // Map attendee to user for display
+        status: "active", // Backend doesn't provide status
+        eventsCreated: 0, // Backend doesn't provide this
+        ticketsPurchased: 0, // Backend doesn't provide this
+        joinedAt: user.created_at, // Map created_at to joinedAt
+      }));
+      setUsers(mappedUsers);
+    } catch (err) {
+      console.error("Failed to fetch users:", err);
+      setError(err.response?.data?.message || "Failed to load users");
+      toast.error("Failed to load users");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase());
+      user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesRole = roleFilter === "all" || user.role === roleFilter;
     return matchesSearch && matchesRole;
   });
@@ -112,20 +94,26 @@ const AdminUsers = () => {
     users: users.filter((u) => u.role === "user").length,
   };
 
-  const handleRoleChange = (userId, newRole) => {
-    setUsers(users.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
-    toast.success("User role updated successfully!");
+  const handleRoleChange = async (userId, newRole) => {
+    try {
+      setActionLoading(true);
+      // Map frontend role to backend role (user → attendee)
+      const backendRole = newRole === 'user' ? 'attendee' : newRole;
+      await adminService.updateUserRole(userId, backendRole);
+      // Update local state
+      setUsers(users.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
+      toast.success("User role updated successfully!");
+    } catch (err) {
+      console.error("Failed to update user role:", err);
+      toast.error(err.response?.data?.message || "Failed to update user role");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleStatusToggle = (userId) => {
-    setUsers(
-      users.map((u) =>
-        u.id === userId
-          ? { ...u, status: u.status === "active" ? "suspended" : "active" }
-          : u
-      )
-    );
-    toast.success("User status updated!");
+    // Backend doesn't support status toggle yet
+    toast.info("Status toggle feature coming soon");
   };
 
   const getRoleBadge = (role) => {
@@ -148,7 +136,28 @@ const AdminUsers = () => {
           <p className="text-muted-foreground">View and manage platform users</p>
         </div>
 
-        {/* Stats */}
+        {/* Loading state */}
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground mx-auto mb-2" />
+              <p className="text-muted-foreground">Loading users...</p>
+            </div>
+          </div>
+        ) : error ? (
+          /* Error state */
+          <Card className="border-destructive bg-destructive/5">
+            <CardContent className="p-6 text-center">
+              <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+              <p className="text-destructive mb-4">{error}</p>
+              <Button variant="outline" onClick={fetchUsers}>
+                Retry
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -315,20 +324,26 @@ const AdminUsers = () => {
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
+                              <Button variant="ghost" size="icon" disabled={actionLoading}>
                                 <MoreVertical className="w-4 h-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>
+                              <DropdownMenuItem disabled>
                                 <Mail className="w-4 h-4 mr-2" />
                                 Send Email
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleRoleChange(user.id, "organizer")}>
+                              <DropdownMenuItem 
+                                onClick={() => handleRoleChange(user.id, "organizer")}
+                                disabled={actionLoading}
+                              >
                                 <UserCog className="w-4 h-4 mr-2" />
                                 Make Organizer
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleStatusToggle(user.id)}>
+                              <DropdownMenuItem 
+                                onClick={() => handleStatusToggle(user.id)}
+                                disabled={actionLoading}
+                              >
                                 {user.status === "active" ? (
                                   <>
                                     <Ban className="w-4 h-4 mr-2" />
@@ -361,6 +376,8 @@ const AdminUsers = () => {
             </CardContent>
           </Card>
         </motion.div>
+          </>
+        )}
       </div>
     </DashboardLayout>
   );
