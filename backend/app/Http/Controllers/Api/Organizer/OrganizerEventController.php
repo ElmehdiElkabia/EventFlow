@@ -42,6 +42,48 @@ class OrganizerEventController extends BaseController
     }
 
     /**
+     * Show single event
+     * 
+     * @param int $id
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function show($id)
+    {
+        $event = Event::with('category', 'tickets', 'ticketTypes')
+            ->find($id);
+
+        if (!$event) {
+            return $this->notFound('Event not found');
+        }
+
+        // Check authorization
+        if (!$event->organizers()->where('user_id', auth()->user()->id)->exists()) {
+            return $this->error('Unauthorized', [], 403);
+        }
+
+        return $this->success([
+            'id' => $event->id,
+            'title' => $event->title,
+            'description' => $event->description,
+            'start_date' => $event->start_date,
+            'end_date' => $event->end_date,
+            'location' => $event->location,
+            'latitude' => $event->latitude,
+            'longitude' => $event->longitude,
+            'capacity' => $event->capacity,
+            'image_url' => $event->image_url,
+            'category_id' => $event->category_id,
+            'status' => $event->status,
+            'category' => $event->category ? [
+                'id' => $event->category->id,
+                'name' => $event->category->name,
+            ] : null,
+            'tickets_sold' => $event->tickets->count(),
+            'price' => $event->ticketTypes->min('price') ?? 0,
+        ]);
+    }
+
+    /**
      * Create new event
      * 
      * @param StoreEventRequest $request
