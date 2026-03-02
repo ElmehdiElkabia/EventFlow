@@ -29,11 +29,12 @@ const Notifications = () => {
       setLoading(true);
       setError(null);
       const response = await userService.getNotifications();
-      setNotifications(response.data.data || []);
+      setNotifications(response?.data || []);
     } catch (err) {
       console.error('Failed to fetch notifications:', err);
-      setError(err.response?.data?.message || 'Failed to load notifications');
-      toast.error('Failed to load notifications');
+      const errorMsg = err.response?.data?.message || 'Failed to load notifications';
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
