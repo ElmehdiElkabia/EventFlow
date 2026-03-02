@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,9 +41,12 @@ import {
   Briefcase,
   Dumbbell,
   UtensilsCrossed,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import adminService from "@/services/adminService";
 
 const iconMap = {
   music: Music,
@@ -55,22 +58,39 @@ const iconMap = {
   folder: FolderOpen,
 };
 
-// Mock categories
-const mockCategories = [
-  { id: "1", name: "Technology", icon: "code", description: "Tech conferences, hackathons, and workshops", eventCount: 15 },
-  { id: "2", name: "Music", icon: "music", description: "Concerts, festivals, and live performances", eventCount: 28 },
-  { id: "3", name: "Art", icon: "palette", description: "Exhibitions, galleries, and art shows", eventCount: 12 },
-  { id: "4", name: "Business", icon: "briefcase", description: "Networking events, conferences, and seminars", eventCount: 20 },
-  { id: "5", name: "Sports", icon: "dumbbell", description: "Sports events, fitness classes, and competitions", eventCount: 18 },
-  { id: "6", name: "Food", icon: "utensils", description: "Food festivals, cooking classes, and tastings", eventCount: 9 },
-];
-
 const ManageCategories = () => {
-  const [categories, setCategories] = useState(mockCategories);
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [formData, setFormData] = useState({ name: "", icon: "folder", description: "" });
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await adminService.getCategories();
+      // Map backend 'count' to frontend 'eventCount'
+      const mappedCategories = data.map(cat => ({
+        ...cat,
+        eventCount: cat.count || 0,
+      }));
+      setCategories(mappedCategories);
+    } catch (err) {
+      console.error("Failed to fetch categories:", err);
+      setError(err.response?.data?.message || "Failed to load categories");
+      toast.error("Failed to load categories");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCreate = () => {
     setSelectedCategory(null);
@@ -93,35 +113,69 @@ const ManageCategories = () => {
     setDeleteDialogOpen(true);
   };
 
-  const confirmSave = () => {
-    if (selectedCategory) {
-      setCategories(
-        categories.map((c) =>
-          c.id === selectedCategory.id
-            ? { ...c, ...formData }
-            : c
-        )
-      );
-      toast.success("Category updated successfully!");
-    } else {
-      const newCategory = {
-        id: String(Date.now()),
-        ...formData,
-        eventCount: 0,
-      };
-      setCategories([...categories, newCategory]);
-      toast.success("Category created successfully!");
+  const confirmSave = async () => {
+    if (!formData.name.trim()) {
+      toast.error("Category name is required");
+      return;
     }
-    setEditDialogOpen(false);
+
+    try {
+      setSaving(true);
+      if (selectedCategory) {
+        // Update existing category
+        await adminService.updateCategory(selectedCategory.id, formData);
+        toast.success("Category updated successfully!");
+      } else {
+        // Create new category
+        await adminService.createCategory(formData);
+        toast.success("Category created successfully!");
+      }
+      setEditDialogOpen(false);
+      fetchCategories(); // Refresh the list
+    } catch (err) {
+      console.error("Failed to save category:", err);
+      toast.error(err.response?.data?.message || "Failed to save category");
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const confirmDelete = () => {
-    if (selectedCategory) {
-      setCategories(categories.filter((c) => c.id !== selectedCategory.id));
+  const confirmDelete = async () => {
+    if (!selectedCategory) return;
+
+    try {
+      await adminService.deleteCategory(selectedCategory.id);
       toast.success("Category deleted successfully!");
+      setDeleteDialogOpen(false);
+      fetchCategories(); // Refresh the list
+    } catch (err) {
+      console.error("Failed to delete category:", err);
+      toast.error(err.response?.data?.message || "Failed to delete category");
+      setDeleteDialogOpen(false);
     }
-    setDeleteDialogOpen(false);
   };
+
+  if (loading) {
+    return (
+      <DashboardLayout role="admin">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout role="admin">
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+          <AlertCircle className="w-12 h-12 text-destructive" />
+          <p className="text-muted-foreground">{error}</p>
+          <Button onClick={fetchCategories}>Try Again</Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout role="admin">
@@ -294,11 +348,18 @@ const ManageCategories = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)} disabled={saving}>
               Cancel
             </Button>
-            <Button variant="hero" onClick={confirmSave}>
-              {selectedCategory ? "Save Changes" : "Create Category"}
+            <Button variant="hero" onClick={confirmSave} disabled={saving}>
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {selectedCategory ? "Saving..." : "Creating..."}
+                </>
+              ) : (
+                selectedCategory ? "Save Changes" : "Create Category"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
