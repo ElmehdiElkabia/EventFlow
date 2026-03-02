@@ -70,7 +70,7 @@ const AdminEvents = () => {
       );
     } catch (err) {
       console.error("Error fetching events:", err);
-      setError(err.message || "Failed to load events");
+      setError(err.response?.data?.message || "Failed to load events");
       toast.error("Failed to load events");
     } finally {
       setLoading(false);
@@ -86,8 +86,8 @@ const AdminEvents = () => {
       .filter((e) => e.status === status)
       .filter(
         (e) =>
-          e.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          e.organizer.toLowerCase().includes(searchQuery.toLowerCase())
+          e.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          e.organizer?.toLowerCase().includes(searchQuery.toLowerCase())
       );
 
   const handleApprove = (id) => {
@@ -129,7 +129,7 @@ const AdminEvents = () => {
       setRejectionReason("");
     } catch (err) {
       console.error("Error performing action:", err);
-      toast.error("Failed to perform action. Please try again.");
+      toast.error(err.response?.data?.message || "Failed to perform action. Please try again.");
     } finally {
       setActionLoading(false);
     }
