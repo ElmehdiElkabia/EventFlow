@@ -56,7 +56,7 @@ const MyEvents = () => {
       setLoading(true);
       setError(null);
       const response = await organizerService.getMyEvents();
-      setEvents(response.data.data || []);
+      setEvents(response.data || []);
     } catch (err) {
       console.error("Failed to fetch events:", err);
       setError(err.response?.data?.message || "Failed to load events");
