@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
   Clock,
   DollarSign,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import {
@@ -83,6 +84,25 @@ const Refunds = () => {
   const [selectedRefund, setSelectedRefund] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // TODO: Implement API integration when backend refund routes are available
+  // useEffect(() => {
+  //   fetchRefunds();
+  // }, []);
+
+  // const fetchRefunds = async () => {
+  //   try {
+  //     setLoading(true);
+  //     const response = await adminService.getRefunds();
+  //     setRefunds(response || []);
+  //   } catch (err) {
+  //     console.error('Failed to fetch refunds:', err);
+  //     toast.error(err.response?.data?.message || 'Failed to load refunds');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const filteredRefunds = refunds.filter(
     (r) =>
