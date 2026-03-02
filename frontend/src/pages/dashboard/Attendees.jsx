@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,15 +27,14 @@ import {
   CheckCircle2,
   Clock,
   Users,
+  Loader2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { attendeeService } from "@/services/attendeeService";
-import { organizerService } from "@/services/organizerService";
 import { toast } from "sonner";
 
 const Attendees = () => {
   const { id: eventId } = useParams();
-  const navigate = useNavigate();
   const [attendees, setAttendees] = useState([]);
   const [event, setEvent] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -52,13 +51,13 @@ const Attendees = () => {
     try {
       setLoading(true);
       setError(null);
-      const [eventRes, attendeesRes] = await Promise.all([
-        organizerService.getEvent(eventId),
-        attendeeService.getAttendees(eventId),
-      ]);
-
-      setEvent(eventRes.data || eventRes);
+      const attendeesRes = await attendeeService.getAttendees(eventId);
+      
       setAttendees(attendeesRes || []);
+      // Get event title from first attendee if available
+      if (attendeesRes && attendeesRes.length > 0) {
+        setEvent({ title: attendeesRes[0].event });
+      }
     } catch (err) {
       console.error("Failed to load attendees:", err);
       setError(err.response?.data?.message || "Failed to load attendees");
@@ -71,9 +70,9 @@ const Attendees = () => {
   const filteredAttendees = useMemo(() => {
     return attendees.filter((attendee) => {
       const matchesSearch =
-        attendee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        attendee.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        attendee.ticketCode.toLowerCase().includes(searchQuery.toLowerCase());
+        attendee.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        attendee.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        attendee.ticketCode?.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesStatus = statusFilter === "all" || attendee.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
