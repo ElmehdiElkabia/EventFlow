@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -23,92 +24,78 @@ import {
   Ticket,
   Calendar,
   ArrowUpRight,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
-
-// Mock data
-const mockEvents = [
-  { id: "all", title: "All Events" },
-  { id: "1", title: "Tech Innovation Summit 2024" },
-  { id: "2", title: "Electronic Music Festival" },
-  { id: "3", title: "Startup Pitch Competition" },
-];
-
-const salesData = [
-  {
-    id: "1",
-    event: "Tech Innovation Summit 2024",
-    ticketsSold: 450,
-    totalCapacity: 500,
-    revenue: 134550,
-    avgPrice: 299,
-    lastSale: "2 hours ago",
-  },
-  {
-    id: "2",
-    event: "Electronic Music Festival",
-    ticketsSold: 2800,
-    totalCapacity: 3000,
-    revenue: 420000,
-    avgPrice: 150,
-    lastSale: "5 min ago",
-  },
-  {
-    id: "3",
-    event: "Startup Pitch Competition",
-    ticketsSold: 180,
-    totalCapacity: 200,
-    revenue: 0,
-    avgPrice: 0,
-    lastSale: "1 day ago",
-  },
-];
-
-const recentTransactions = [
-  {
-    id: "1",
-    buyer: "John Smith",
-    event: "Electronic Music Festival",
-    tickets: 2,
-    amount: 300,
-    date: "2024-12-05T14:30:00",
-    status: "completed",
-  },
-  {
-    id: "2",
-    buyer: "Sarah Johnson",
-    event: "Tech Innovation Summit 2024",
-    tickets: 1,
-    amount: 299,
-    date: "2024-12-05T13:15:00",
-    status: "completed",
-  },
-  {
-    id: "3",
-    buyer: "Mike Davis",
-    event: "Electronic Music Festival",
-    tickets: 4,
-    amount: 600,
-    date: "2024-12-05T12:00:00",
-    status: "completed",
-  },
-  {
-    id: "4",
-    buyer: "Emily Brown",
-    event: "Startup Pitch Competition",
-    tickets: 1,
-    amount: 0,
-    date: "2024-12-05T11:30:00",
-    status: "completed",
-  },
-];
+import { organizerService } from "@/services/organizerService";
+import { toast } from "sonner";
 
 const TicketSales = () => {
   const [selectedEvent, setSelectedEvent] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [overview, setOverview] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [events, setEvents] = useState([]);
 
-  const totalRevenue = salesData.reduce((acc, item) => acc + item.revenue, 0);
-  const totalTickets = salesData.reduce((acc, item) => acc + item.ticketsSold, 0);
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [overviewRes, transactionsRes, eventsRes] = await Promise.all([
+        organizerService.getSalesOverview(),
+        organizerService.getTransactions(),
+        organizerService.getMyEvents(),
+      ]);
+      setOverview(overviewRes || {});
+      setTransactions(transactionsRes || []);
+      setEvents(eventsRes || []);
+    } catch (err) {
+      console.error('Failed to fetch sales data:', err);
+      const errorMsg = err.response?.data?.message || 'Failed to load sales data';
+      setError(errorMsg);
+      toast.error(errorMsg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <DashboardLayout role="organizer">
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout role="organizer">
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+          <AlertCircle className="w-12 h-12 text-destructive" />
+          <p className="text-muted-foreground">{error}</p>
+          <Button onClick={fetchData}>Try Again</Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  const totalRevenue = overview?.totalRevenue || 0;
+  const totalTickets = overview?.ticketsSold || 0;
   const avgSalesPerDay = Math.round(totalTickets / 30);
+  const activeEvents = overview?.activeEvents || 0;
+
+  // Filter transactions based on selected event
+  const filteredTransactions = selectedEvent === "all" 
+    ? transactions.slice(0, 10)
+    : transactions.filter(tx => tx.event === events.find(e => String(e.id) === selectedEvent)?.title).slice(0, 10);
 
   return (
     <DashboardLayout role="organizer">
@@ -124,8 +111,9 @@ const TicketSales = () => {
               <SelectValue placeholder="Select event" />
             </SelectTrigger>
             <SelectContent>
-              {mockEvents.map((event) => (
-                <SelectItem key={event.id} value={event.id}>
+              <SelectItem value="all">All Events</SelectItem>
+              {events.map((event) => (
+                <SelectItem key={event.id} value={String(event.id)}>
                   {event.title}
                 </SelectItem>
               ))}
@@ -215,7 +203,7 @@ const TicketSales = () => {
                   </div>
                 </div>
                 <p className="text-2xl font-bold text-foreground">
-                  {salesData.length}
+                  {activeEvents}
                 </p>
                 <p className="text-sm text-muted-foreground">Active Events</p>
               </CardContent>
@@ -223,7 +211,7 @@ const TicketSales = () => {
           </motion.div>
         </div>
 
-        {/* Sales by Event */}
+        {/* Events Sales Table */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -231,57 +219,51 @@ const TicketSales = () => {
         >
           <Card variant="elevated">
             <CardHeader>
-              <CardTitle className="text-foreground">Sales by Event</CardTitle>
+              <CardTitle className="text-foreground">My Events</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Event</TableHead>
-                      <TableHead>Tickets Sold</TableHead>
-                      <TableHead>Capacity</TableHead>
-                      <TableHead>Revenue</TableHead>
-                      <TableHead>Avg. Price</TableHead>
-                      <TableHead>Last Sale</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {salesData.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium text-foreground">
-                          {item.event}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <span className="text-foreground">{item.ticketsSold}</span>
-                            <div className="w-24 h-2 rounded-full bg-secondary">
-                              <div
-                                className="h-full rounded-full bg-gradient-primary"
-                                style={{
-                                  width: `${(item.ticketsSold / item.totalCapacity) * 100}%`,
-                                }}
-                              />
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {item.totalCapacity}
-                        </TableCell>
-                        <TableCell className="font-medium text-foreground">
-                          ${item.revenue.toLocaleString()}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {item.avgPrice === 0 ? "Free" : `$${item.avgPrice}`}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {item.lastSale}
-                        </TableCell>
+              {events.length === 0 ? (
+                <div className="p-12 text-center">
+                  <p className="text-muted-foreground">No events found</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Event</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Tickets Sold</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Price</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {events.map((event) => (
+                        <TableRow key={event.id}>
+                          <TableCell className="font-medium text-foreground">
+                            {event.title}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {event.date}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {event.ticketsSold || 0}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={event.status === "approved" ? "success" : "outline"}>
+                              {event.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-medium text-foreground">
+                            {event.price ? `$${event.price}` : "Free"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -297,40 +279,48 @@ const TicketSales = () => {
               <CardTitle className="text-foreground">Recent Transactions</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Buyer</TableHead>
-                      <TableHead>Event</TableHead>
-                      <TableHead>Tickets</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {recentTransactions.map((tx) => (
-                      <TableRow key={tx.id}>
-                        <TableCell className="font-medium text-foreground">
-                          {tx.buyer}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{tx.event}</TableCell>
-                        <TableCell className="text-muted-foreground">{tx.tickets}</TableCell>
-                        <TableCell className="font-medium text-foreground">
-                          {tx.amount === 0 ? "Free" : `$${tx.amount}`}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {new Date(tx.date).toLocaleString()}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="success">{tx.status}</Badge>
-                        </TableCell>
+              {filteredTransactions.length === 0 ? (
+                <div className="p-12 text-center">
+                  <p className="text-muted-foreground">No transactions found</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Buyer</TableHead>
+                        <TableHead>Event</TableHead>
+                        <TableHead>Tickets</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Status</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredTransactions.map((tx) => (
+                        <TableRow key={tx.id}>
+                          <TableCell className="font-medium text-foreground">
+                            {tx.buyer}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">{tx.event}</TableCell>
+                          <TableCell className="text-muted-foreground">{tx.tickets || 1}</TableCell>
+                          <TableCell className="font-medium text-foreground">
+                            {tx.amount === 0 ? "Free" : `$${typeof tx.amount === 'number' ? tx.amount.toFixed(2) : tx.amount}`}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {tx.date}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={tx.status === "completed" ? "success" : "outline"}>
+                              {tx.status}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
