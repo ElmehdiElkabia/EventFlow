@@ -25,10 +25,11 @@ class ReviewController extends BaseController
             ->get()
             ->map(fn($review) => [
                 'id' => $review->id,
-                'event' => $review->event->title,
+                'event_title' => $review->event->title,
+                'event_id' => $review->event->id,
                 'rating' => $review->rating,
                 'comment' => $review->comment,
-                'date' => $review->created_at->format('M d, Y'),
+                'created_at' => $review->created_at,
             ]);
 
         return $this->success($reviews->all());
