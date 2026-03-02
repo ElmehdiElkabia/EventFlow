@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import {
   Search,
   Plus,
   Trash2,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import {
@@ -30,76 +32,91 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-
-const mockAnnouncements = [
-  {
-    id: "1",
-    title: "Event Schedule Update",
-    message: "The venue doors will now open at 6 PM instead of 7 PM. Please plan accordingly.",
-    event: "Tech Innovation Summit 2024",
-    sentAt: "2024-12-10T14:30:00",
-    recipientCount: 450,
-  },
-  {
-    id: "2",
-    title: "Parking Information",
-    message: "Free parking is available at Lot B. Show your ticket for complimentary access.",
-    event: "Electronic Music Festival",
-    sentAt: "2024-12-08T10:00:00",
-    recipientCount: 2800,
-  },
-  {
-    id: "3",
-    title: "Weather Advisory",
-    message: "Please bring an umbrella as there's a chance of rain. The event will proceed as planned.",
-    event: "Startup Pitch Competition",
-    sentAt: "2024-12-05T16:45:00",
-    recipientCount: 180,
-  },
-];
-
-const mockEvents = [
-  { id: "1", title: "Tech Innovation Summit 2024", attendees: 450 },
-  { id: "2", title: "Electronic Music Festival", attendees: 2800 },
-  { id: "3", title: "Startup Pitch Competition", attendees: 180 },
-];
+import { organizerService } from "@/services/organizerService";
 
 const Announcements = () => {
-  const [announcements, setAnnouncements] = useState(mockAnnouncements);
+  const [announcements, setAnnouncements] = useState([]);
+  const [events, setEvents] = useState([]);
+  const [loadingEvents, setLoadingEvents] = useState(true);
+  const [eventsError, setEventsError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [sending, setSending] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     message: "",
     eventId: "",
   });
 
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const fetchEvents = async () => {
+    try {
+      setLoadingEvents(true);
+      setEventsError(null);
+      const response = await organizerService.getMyEvents();
+      const eventsList = response.data || [];
+      // Map to simpler format for dropdown
+      const mappedEvents = eventsList.map(event => ({
+        id: event.id,
+        title: event.title,
+        attendees: event.ticketsSold || 0,
+      }));
+      setEvents(mappedEvents);
+    } catch (err) {
+      console.error("Failed to fetch events:", err);
+      setEventsError(err.response?.data?.message || "Failed to load events");
+      toast.error("Failed to load events");
+    } finally {
+      setLoadingEvents(false);
+    }
+  };
+
   const filteredAnnouncements = announcements.filter(
     (a) =>
-      a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.event.toLowerCase().includes(searchQuery.toLowerCase())
+      a.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      a.event?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!formData.title || !formData.message || !formData.eventId) {
       toast.error("Please fill in all fields");
       return;
     }
 
-    const selectedEvent = mockEvents.find((e) => e.id === formData.eventId);
-    const newAnnouncement = {
-      id: Date.now().toString(),
-      title: formData.title,
-      message: formData.message,
-      event: selectedEvent?.title || "",
-      sentAt: new Date().toISOString(),
-      recipientCount: selectedEvent?.attendees || 0,
-    };
+    try {
+      setSending(true);
+      const selectedEvent = events.find((e) => e.id === formData.eventId);
+      
+      // Send announcement via API
+      await organizerService.sendAnnouncement({
+        title: formData.title,
+        message: formData.message,
+        event_id: formData.eventId,
+      });
 
-    setAnnouncements([newAnnouncement, ...announcements]);
-    setFormData({ title: "", message: "", eventId: "" });
-    setDialogOpen(false);
-    toast.success(`Announcement sent to ${selectedEvent?.attendees} attendees`);
+      // Add to local state for display (backend doesn't provide list endpoint)
+      const newAnnouncement = {
+        id: Date.now().toString(),
+        title: formData.title,
+        message: formData.message,
+        event: selectedEvent?.title || "",
+        sentAt: new Date().toISOString(),
+        recipientCount: selectedEvent?.attendees || 0,
+      };
+
+      setAnnouncements([newAnnouncement, ...announcements]);
+      setFormData({ title: "", message: "", eventId: "" });
+      setDialogOpen(false);
+      toast.success(`Announcement sent to ${selectedEvent?.attendees || 0} attendees`);
+    } catch (err) {
+      console.error("Failed to send announcement:", err);
+      toast.error(err.response?.data?.message || "Failed to send announcement");
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleDelete = (id) => {
@@ -118,7 +135,15 @@ const Announcements = () => {
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="hero">
+              <Button 
+                variant="hero" 
+                disabled={loadingEvents || events.length === 0}
+                onClick={() => {
+                  if (events.length === 0 && !loadingEvents) {
+                    toast.error("No events available. Create an event first.");
+                  }
+                }}
+              >
                 <Plus className="w-4 h-4 mr-2" />
                 New Announcement
               </Button>
@@ -130,16 +155,20 @@ const Announcements = () => {
               <div className="space-y-4 mt-4">
                 <div>
                   <label className="text-sm font-medium text-foreground">Select Event</label>
+                  {eventsError ? (
+                    <div className="text-sm text-destructive mt-1">{eventsError}</div>
+                  ) : null}
                   <Select
                     value={formData.eventId}
                     onValueChange={(value) => setFormData({ ...formData, eventId: value })}
+                    disabled={loadingEvents || !!eventsError}
                   >
                     <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Choose an event" />
+                      <SelectValue placeholder={loadingEvents ? "Loading events..." : eventsError ? "Failed to load events" : "Choose an event"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {mockEvents.map((event) => (
-                        <SelectItem key={event.id} value={event.id}>
+                      {events.map((event) => (
+                        <SelectItem key={event.id} value={String(event.id)}>
                           {event.title} ({event.attendees} attendees)
                         </SelectItem>
                       ))}
@@ -164,9 +193,18 @@ const Announcements = () => {
                     className="mt-1 min-h-[120px]"
                   />
                 </div>
-                <Button variant="hero" className="w-full" onClick={handleSend}>
-                  <Send className="w-4 h-4 mr-2" />
-                  Send Announcement
+                <Button variant="hero" className="w-full" onClick={handleSend} disabled={sending || loadingEvents || !!eventsError}>
+                  {sending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Send Announcement
+                    </>
+                  )}
                 </Button>
               </div>
             </DialogContent>
@@ -243,9 +281,21 @@ const Announcements = () => {
             <Megaphone className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-foreground mb-2">No announcements yet</h3>
             <p className="text-muted-foreground mb-6">
-              Send your first announcement to keep attendees informed
+              {events.length === 0 && !loadingEvents
+                ? "Create an event first to send announcements"
+                : "Send your first announcement to keep attendees informed"}
             </p>
-            <Button variant="hero" onClick={() => setDialogOpen(true)}>
+            <Button 
+              variant="hero" 
+              onClick={() => {
+                if (events.length === 0 && !loadingEvents) {
+                  toast.error("No events available. Create an event first.");
+                } else {
+                  setDialogOpen(true);
+                }
+              }}
+              disabled={loadingEvents || events.length === 0}
+            >
               <Plus className="w-4 h-4 mr-2" />
               New Announcement
             </Button>
