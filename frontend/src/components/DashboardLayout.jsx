@@ -59,6 +59,16 @@ const DashboardLayout = ({ children, role }) => {
   const currentRole = role || user?.role || "attendee";
   const items = menuItems[currentRole] || [];
 
+  // Get user initials
+  const getUserInitials = () => {
+    if (!user?.name) return "U";
+    const names = user.name.split(" ");
+    if (names.length >= 2) {
+      return (names[0][0] + names[1][0]).toUpperCase();
+    }
+    return user.name.substring(0, 2).toUpperCase();
+  };
+
   return (
     <div className="min-h-screen bg-background dark">
       {/* Sidebar */}
@@ -110,11 +120,11 @@ const DashboardLayout = ({ children, role }) => {
           <div className="p-4 border-t border-border">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                <span className="text-primary font-semibold">JD</span>
+                <span className="text-primary font-semibold">{getUserInitials()}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-foreground truncate">John Doe</p>
-                <p className="text-sm text-muted-foreground capitalize">{role}</p>
+                <p className="font-medium text-foreground truncate">{user?.name || 'User'}</p>
+                <p className="text-sm text-muted-foreground capitalize">{currentRole}</p>
               </div>
               <ChevronDown className="w-4 h-4 text-muted-foreground" />
             </div>
