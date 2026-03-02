@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\BaseController;
 use App\Http\Requests\Api\User\BuyTicketRequest;
 use App\Models\Ticket;
 use App\Models\Attendee;
+use App\Models\Transaction;
+use App\Models\Event;
 
 /**
  * User Ticket Controller
@@ -47,18 +49,20 @@ class TicketController extends BaseController
      */
     public function buy(BuyTicketRequest $request)
     {
-        $event = \App\Models\Event::find($request->event_id);
+        $event = Event::find($request->event_id);
 
         if (!$event) {
             return $this->notFound('Event not found');
         }
 
         // Create transaction
-        $transaction = \App\Models\Transaction::create([
+        $transaction = Transaction::create([
+            'transaction_id' => 'TXN-' . strtoupper(uniqid()),
             'user_id' => auth()->user()->id,
             'event_id' => $event->id,
             'amount' => $request->amount,
             'status' => 'completed', // Would integrate with payment processor
+            'payment_method' => 'card',
         ]);
 
         // Create tickets
@@ -68,7 +72,7 @@ class TicketController extends BaseController
                 'user_id' => auth()->user()->id,
                 'event_id' => $event->id,
                 'ticket_type_id' => $request->ticket_type_id,
-                'ticket_code' => 'TKT-' . uniqid(),
+                'ticket_code' => 'TKT-' . strtoupper(uniqid()),
                 'status' => 'valid',
                 'price' => $request->amount / $request->quantity,
                 'purchased_at' => now(),
@@ -89,7 +93,7 @@ class TicketController extends BaseController
         }
 
         return $this->success([
-            'transaction_id' => $transaction->id,
+            'transaction_id' => $transaction->transaction_id,
             'tickets' => $tickets,
             'amount' => $transaction->amount,
         ], 'Tickets purchased successfully', 201);
