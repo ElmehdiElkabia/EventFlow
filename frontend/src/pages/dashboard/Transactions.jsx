@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import adminService from "@/services/adminService";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +15,7 @@ import {
   ArrowDownRight,
   DollarSign,
   TrendingUp,
+  Loader2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import {
@@ -23,88 +26,39 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const mockTransactions = [
-  {
-    id: "TXN001",
-    user: "Alice Johnson",
-    email: "alice@example.com",
-    event: "Tech Innovation Summit",
-    amount: 299.0,
-    status: "completed",
-    date: "2024-12-10T14:30:00",
-    method: "Credit Card",
-  },
-  {
-    id: "TXN002",
-    user: "Bob Smith",
-    email: "bob@example.com",
-    event: "Electronic Music Festival",
-    amount: 150.0,
-    status: "completed",
-    date: "2024-12-10T12:15:00",
-    method: "PayPal",
-  },
-  {
-    id: "TXN003",
-    user: "Carol White",
-    email: "carol@example.com",
-    event: "Startup Pitch Competition",
-    amount: 0.0,
-    status: "completed",
-    date: "2024-12-09T18:45:00",
-    method: "Free",
-  },
-  {
-    id: "TXN004",
-    user: "David Brown",
-    email: "david@example.com",
-    event: "Art Exhibition Opening",
-    amount: 45.0,
-    status: "pending",
-    date: "2024-12-09T10:00:00",
-    method: "Credit Card",
-  },
-  {
-    id: "TXN005",
-    user: "Eva Martinez",
-    email: "eva@example.com",
-    event: "Tech Innovation Summit",
-    amount: 299.0,
-    status: "refunded",
-    date: "2024-12-08T16:20:00",
-    method: "Credit Card",
-  },
-];
-
-const stats = [
-  {
-    title: "Total Revenue",
-    value: "$45,231",
-    change: "+12.5%",
-    trend: "up",
-    icon: DollarSign,
-  },
-  {
-    title: "Transactions",
-    value: "1,247",
-    change: "+8.2%",
-    trend: "up",
-    icon: CreditCard,
-  },
-  {
-    title: "Avg. Order Value",
-    value: "$36.27",
-    change: "+3.1%",
-    trend: "up",
-    icon: TrendingUp,
-  },
-];
-
 const Transactions = () => {
+  const [transactions, setTransactions] = useState([]);
+  const [stats, setStats] = useState({
+    totalRevenue: 0,
+    totalTransactions: 0,
+    avgOrderValue: 0,
+  });
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const filteredTransactions = mockTransactions.filter((t) => {
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [transactionsData, statsData] = await Promise.all([
+          adminService.getTransactions(),
+          adminService.getTransactionStats(),
+        ]);
+        setTransactions(transactionsData || []);
+        setStats(statsData || {});
+      } catch (err) {
+        console.error('Failed to fetch transactions:', err);
+        toast.error(err.response?.data?.message || 'Failed to load transactions');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const filteredTransactions = transactions.filter((t) => {
     const matchesSearch =
       t.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.event.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -142,68 +96,103 @@ const Transactions = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {stats.map((stat, index) => (
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <motion.div
-              key={stat.title}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
+              transition={{ duration: 0.3 }}
             >
               <Card variant="elevated">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-                      <stat.icon className="w-6 h-6 text-primary" />
-                    </div>
-                    <div
-                      className={`flex items-center gap-1 text-sm ${
-                        stat.trend === "up" ? "text-emerald-400" : "text-red-400"
-                      }`}
-                    >
-                      {stat.trend === "up" ? (
-                        <ArrowUpRight className="w-4 h-4" />
-                      ) : (
-                        <ArrowDownRight className="w-4 h-4" />
-                      )}
-                      {stat.change}
+                      <DollarSign className="w-6 h-6 text-primary" />
                     </div>
                   </div>
-                  <p className="text-2xl font-bold text-foreground">{stat.value}</p>
-                  <p className="text-sm text-muted-foreground">{stat.title}</p>
+                  <p className="text-2xl font-bold text-foreground">
+                    ${stats.totalRevenue?.toFixed(2) || '0.00'}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Total Revenue</p>
                 </CardContent>
               </Card>
             </motion.div>
-          ))}
-        </div>
+            
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+            >
+              <Card variant="elevated">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                      <CreditCard className="w-6 h-6 text-primary" />
+                    </div>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground">
+                    {stats.totalTransactions || 0}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Transactions</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+            
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+            >
+              <Card variant="elevated">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                      <TrendingUp className="w-6 h-6 text-primary" />
+                    </div>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground">
+                    ${stats.avgOrderValue?.toFixed(2) || '0.00'}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Avg. Order Value</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+        )}
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search transactions..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
-              <Filter className="w-4 h-4 mr-2" />
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="refunded">Refunded</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {!loading && (
+          <>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search transactions..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <Filter className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="refunded">Refunded</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        {/* Transactions Table */}
-        <motion.div
+            {/* Transactions Table */}
+            <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.3 }}
@@ -276,12 +265,14 @@ const Transactions = () => {
           </Card>
         </motion.div>
 
-        {filteredTransactions.length === 0 && (
+        {filteredTransactions.length === 0 && !loading && (
           <Card variant="elevated" className="p-12 text-center">
             <CreditCard className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-foreground mb-2">No transactions found</h3>
             <p className="text-muted-foreground">Try adjusting your search or filters</p>
           </Card>
+        )}
+          </>
         )}
       </div>
     </DashboardLayout>
