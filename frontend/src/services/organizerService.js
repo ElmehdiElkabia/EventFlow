@@ -29,4 +29,19 @@ export const organizerService = {
    * Delete an event.
    */
   deleteEvent: (id) => api.delete(`/organizer/events/${id}`),
+
+  /**
+   * Send announcement to event attendees.
+   */
+  sendAnnouncement: (data) => api.post('/organizer/announcements', data),
+
+  /**
+   * Get sales overview for organizer.
+   */
+  getSalesOverview: () => api.get('/organizer/sales'),
+
+  /**
+   * Get transactions for organizer.
+   */
+  getTransactions: () => api.get('/organizer/transactions'),
 };
