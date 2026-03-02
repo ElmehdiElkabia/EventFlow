@@ -43,10 +43,11 @@ const Settings = () => {
     try {
       setLoading(true);
       const response = await userService.getProfile();
-      setProfile(response.data.data || {});
+      setProfile(response || {});
     } catch (err) {
       console.error('Failed to fetch profile:', err);
-      toast.error('Failed to load profile');
+      const errorMsg = err.response?.data?.message || 'Failed to load profile';
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -263,9 +264,18 @@ const Settings = () => {
                     </div>
                   </div>
 
-                  <Button variant="hero" onClick={handleSaveNotifications}>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Preferences
+                  <Button variant="hero" onClick={handleSaveNotifications} disabled={saving}>
+                    {saving ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Saving
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" />
+                        Save Preferences
+                      </>
+                    )}
                   </Button>
                 </CardContent>
               </Card>
