@@ -49,7 +49,7 @@ const EditEvent = () => {
       setLoading(true);
       setError(null);
       const response = await organizerService.getEvent(id);
-      const event = response.data.data;
+      const event = response || {};
       setFormData({
         title: event.title || "",
         description: event.description || "",
@@ -64,7 +64,7 @@ const EditEvent = () => {
     } catch (err) {
       console.error("Failed to fetch event:", err);
       setError(err.response?.data?.message || "Failed to load event");
-      toast.error("Failed to load event");
+      toast.error(err.response?.data?.message || "Failed to load event");
     } finally {
       setLoading(false);
     }
@@ -73,11 +73,11 @@ const EditEvent = () => {
   const loadCategories = async () => {
     try {
       const response = await categoryService.getCategories();
-      const list = response.data?.data || response.data || [];
+      const list = response || [];
       setCategories(Array.isArray(list) ? list : []);
     } catch (err) {
       console.error("Failed to load categories:", err);
-      toast.error("Failed to load categories");
+      toast.error(err.response?.data?.message || "Failed to load categories");
     } finally {
       setLoadingCategories(false);
     }
@@ -100,7 +100,7 @@ const EditEvent = () => {
       location: formData.location,
       capacity: Number(formData.capacity) || 0,
       image: formData.imageUrl,
-      category_id: formData.categoryId,
+      category_id: Number(formData.categoryId),
       latitude: null,
       longitude: null,
     };
