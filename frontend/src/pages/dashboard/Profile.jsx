@@ -52,13 +52,14 @@ const Profile = () => {
         userService.getReviews(),
       ]);
 
-      setProfile(profileRes.data.data || {});
-      setTickets(ticketsRes.data.data || []);
-      setReviews(reviewsRes.data.data || []);
+      setProfile(profileRes || {});
+      setTickets(ticketsRes || []);
+      setReviews(reviewsRes || []);
     } catch (err) {
       console.error('Failed to fetch profile:', err);
-      setError(err.response?.data?.message || 'Failed to load profile');
-      toast.error('Failed to load profile');
+      const errorMsg = err.response?.data?.message || 'Failed to load profile';
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -171,7 +172,7 @@ const Profile = () => {
                     <h3 className="text-xl font-semibold text-foreground">{profile.name}</h3>
                     <p className="text-muted-foreground">Member since {profile.created_at}</p>
                     <Badge variant="outline" className="mt-2 capitalize">
-                      {profile.role}
+                      {profile.role || 'user'}
                     </Badge>
                   </div>
                 </div>
@@ -224,7 +225,7 @@ const Profile = () => {
                       <User className="w-4 h-4 text-muted-foreground" />
                       Role
                     </label>
-                    <p className="mt-1 text-foreground capitalize">{profile.role}</p>
+                    <p className="mt-1 text-foreground capitalize">{profile.role || 'user'}</p>
                   </div>
                 </div>
               </CardContent>
