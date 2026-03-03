@@ -67,6 +67,8 @@ class TicketController extends BaseController
 
         // Create tickets
         $tickets = [];
+        $firstTicketId = null;
+        
         for ($i = 0; $i < $request->quantity; $i++) {
             $ticket = Ticket::create([
                 'user_id' => auth()->user()->id,
@@ -78,19 +80,27 @@ class TicketController extends BaseController
                 'purchased_at' => now(),
             ]);
 
-            // Create attendee record
-            Attendee::create([
-                'user_id' => auth()->user()->id,
-                'event_id' => $event->id,
-                'ticket_id' => $ticket->id,
-                'status' => 'registered',
-            ]);
+            if ($i === 0) {
+                $firstTicketId = $ticket->id;
+            }
 
             $tickets[] = [
                 'id' => $ticket->id,
                 'code' => $ticket->ticket_code,
             ];
         }
+
+        // Create attendee record once per event (not per ticket)
+        Attendee::firstOrCreate(
+            [
+                'user_id' => auth()->user()->id,
+                'event_id' => $event->id,
+            ],
+            [
+                'ticket_id' => $firstTicketId,
+                'status' => 'registered',
+            ]
+        );
 
         return $this->success([
             'transaction_id' => $transaction->transaction_id,
