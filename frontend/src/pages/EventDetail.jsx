@@ -291,6 +291,52 @@ const EventDetail = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Reviews Section */}
+                {eventData.reviews && eventData.reviews.length > 0 && (
+                  <div className="mb-8">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xl font-semibold text-foreground">
+                        Reviews ({eventData.reviews.length})
+                      </h2>
+                      <div className="flex items-center gap-1 text-amber-400">
+                        <Star className="w-5 h-5 fill-current" />
+                        <span className="text-lg font-medium">
+                          {eventData.highlights?.rating || 0}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      {eventData.reviews.map((review) => (
+                        <Card key={review.id} variant="glass">
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between mb-2">
+                              <div>
+                                <p className="font-semibold text-foreground">{review.author}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {review.date}
+                                </p>
+                              </div>
+                              <div className="flex gap-0.5">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    className={`w-4 h-4 ${
+                                      star <= review.rating
+                                        ? "text-amber-400 fill-amber-400"
+                                        : "text-muted-foreground"
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                            <p className="text-muted-foreground">{review.comment}</p>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </motion.div>
             </div>
 
