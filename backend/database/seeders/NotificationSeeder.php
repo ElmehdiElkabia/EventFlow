@@ -2,15 +2,15 @@
 
 namespace Database\Seeders;
 
-use App\Models\Notification;
-use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class NotificationSeeder extends Seeder
 {
     public function run(): void
     {
-        $users = User::all();
+        $users = \App\Models\User::all();
         $types = ['ticket', 'event', 'system'];
 
         foreach ($users as $user) {
@@ -19,14 +19,19 @@ class NotificationSeeder extends Seeder
             for ($i = 0; $i < $count; $i++) {
                 $read = rand(1, 100) <= 60;
 
-                Notification::create([
-                    'user_id' => $user->id,
-                    'type' => $types[array_rand($types)],
-                    'title' => 'Notification ' . ($i + 1),
-                    'message' => 'This is a sample notification for testing.',
-                    'related_model' => null,
-                    'related_id' => null,
+                DB::table('notifications')->insert([
+                    'id' => Str::uuid(),
+                    'type' => 'App\\Notifications\\GenericNotification',
+                    'notifiable_type' => 'App\\Models\\User',
+                    'notifiable_id' => $user->id,
+                    'data' => json_encode([
+                        'type' => $types[array_rand($types)],
+                        'title' => 'Notification ' . ($i + 1),
+                        'message' => 'This is a sample notification for testing.',
+                    ]),
                     'read_at' => $read ? now()->subDays(rand(0, 15)) : null,
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
             }
         }
