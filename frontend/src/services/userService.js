@@ -77,6 +77,23 @@ export const userService = {
   },
 
   /**
+   * Mark notification as read
+   * @param {string} id - Notification ID
+   * @returns {Promise} API response
+   */
+  markNotificationAsRead: (id) => {
+    return api.post(`/user/notifications/${id}/read`);
+  },
+
+  /**
+   * Mark all notifications as read
+   * @returns {Promise} API response
+   */
+  markAllNotificationsAsRead: () => {
+    return api.post('/user/notifications/read-all');
+  },
+
+  /**
    * Update user settings
    * @param {Object} data - Settings data
    * @returns {Promise} API response
