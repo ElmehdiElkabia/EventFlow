@@ -25,6 +25,7 @@ class AnnouncementController extends BaseController
             'title' => $request->title,
             'message' => $request->message,
             'event_id' => $request->event_id,
+            'user_id' => auth()->id(),
         ]);
 
         // Send to all event attendees
