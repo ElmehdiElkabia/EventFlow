@@ -9,12 +9,18 @@ import {
   Bell,
   Loader2,
   AlertCircle,
+  Users,
+  DollarSign,
+  TrendingUp,
+  Activity,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { ticketService, userService } from "@/services/userService";
+import adminService from "@/services/adminService";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -22,22 +28,21 @@ const Dashboard = () => {
   const [tickets, setTickets] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  const [adminStats, setAdminStats] = useState(null);
   const [error, setError] = useState(null);
 
 
   useEffect(() => {
     if (user?.role === 'attendee') {
-      fetchDashboardData();
-    } else {
-      // Non-attendees don't hit attendee-only endpoints
-      setTickets([]);
-      setReviews([]);
-      setNotifications([]);
-      setLoading(false);
+      fetchAttendeeDashboard();
+    } else if (user?.role === 'admin') {
+      fetchAdminDashboard();
+    } else if (user?.role === 'organizer') {
+      fetchOrganizerDashboard();
     }
   }, [user?.role]);
 
-  const fetchDashboardData = async () => {
+  const fetchAttendeeDashboard = async () => {
     try {
       setLoading(true);
       setError(null);
@@ -48,7 +53,6 @@ const Dashboard = () => {
         userService.getNotifications(),
       ]);
 
-      // api interceptor returns the envelope; actual payload is in .data
       setTickets(ticketsRes.data || []);
       setReviews(reviewsRes.data || []);
       setNotifications(notificationsRes.data || []);
@@ -57,6 +61,49 @@ const Dashboard = () => {
       setError(err.response?.data?.message || 'Failed to load dashboard data');
       toast.error('Failed to load dashboard data');
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAdminDashboard = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const [usersRes, eventsRes, transactionsRes, statsRes] = await Promise.all([
+        adminService.getUsers(),
+        adminService.getEvents(),
+        adminService.getTransactions(),
+        adminService.getTransactionStats(),
+      ]);
+
+      setAdminStats({
+        users: usersRes || [],
+        events: eventsRes || [],
+        transactions: transactionsRes || [],
+        stats: statsRes || {},
+      });
+      
+
+    } catch (err) {
+      console.error('Failed to fetch admin dashboard:', err);
+      setError(err.response?.data?.message || 'Failed to load dashboard data');
+      toast.error('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchOrganizerDashboard = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      // For now, just show basic info
+      setLoading(false);
+    } catch (err) {
+      console.error('Failed to fetch organizer dashboard:', err);
+      setError(err.response?.data?.message || 'Failed to load dashboard data');
+      toast.error('Failed to load dashboard data');
       setLoading(false);
     }
   };
@@ -102,14 +149,250 @@ const Dashboard = () => {
         <div className="flex flex-col items-center justify-center h-64 space-y-4">
           <AlertCircle className="w-12 h-12 text-destructive" />
           <p className="text-muted-foreground">{error}</p>
-          <Button onClick={fetchDashboardData}>Try Again</Button>
+          <Button onClick={() => {
+            if (user?.role === 'attendee') fetchAttendeeDashboard();
+            else if (user?.role === 'admin') fetchAdminDashboard();
+            else if (user?.role === 'organizer') fetchOrganizerDashboard();
+          }}>Try Again</Button>
         </div>
       </DashboardLayout>
     );
   }
 
+  // Admin Dashboard
+  if (user?.role === 'admin') {
+    const pendingEvents = adminStats?.events?.filter(e => e.status === 'pending').length || 0;
+    const activeUsers = adminStats?.users?.filter(u => u.status === 'active').length || 0;
+    const totalRevenue = adminStats?.stats?.totalRevenue || 0;
+    const totalTransactions = adminStats?.stats?.totalTransactions || 0;
+
+    return (
+      <DashboardLayout role="admin">
+        <div className="space-y-8">
+          {/* Header */}
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Admin Dashboard</h1>
+            <p className="text-muted-foreground">Platform overview and management</p>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Card variant="elevated">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                      <Users className="w-6 h-6 text-primary" />
+                    </div>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground">{activeUsers}</p>
+                  <p className="text-sm text-muted-foreground">Active Users</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+            >
+              <Card variant="elevated">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                      <Calendar className="w-6 h-6 text-amber-500" />
+                    </div>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground">{adminStats?.events?.length || 0}</p>
+                  <p className="text-sm text-muted-foreground">Total Events</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+            >
+              <Card variant="elevated">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
+                      <DollarSign className="w-6 h-6 text-green-500" />
+                    </div>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground">${Number(totalRevenue || 0).toFixed(2)}</p>
+                  <p className="text-sm text-muted-foreground">Total Revenue</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.3 }}
+            >
+              <Card variant="elevated">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+                      <Activity className="w-6 h-6 text-cyan-500" />
+                    </div>
+                  </div>
+                  <p className="text-2xl font-bold text-foreground">{totalTransactions}</p>
+                  <p className="text-sm text-muted-foreground">Transactions</p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+
+          {/* Quick Actions & Recent Activity */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Pending Events */}
+            {pendingEvents > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.4 }}
+              >
+                <Card variant="elevated">
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-foreground">Pending Approvals</CardTitle>
+                      <Badge variant="warning">{pendingEvents} events</Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground mb-4">
+                      You have {pendingEvents} event{pendingEvents > 1 ? 's' : ''} waiting for approval.
+                    </p>
+                    <Button variant="hero" asChild className="w-full">
+                      <Link to="/dashboard/admin/events">Review Events</Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {/* Recent Transactions */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.5 }}
+            >
+              <Card variant="elevated">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-foreground">Recent Transactions</CardTitle>
+                    <Link to="/dashboard/transactions" className="text-sm text-primary hover:underline">
+                      View All
+                    </Link>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {adminStats?.transactions?.slice(0, 5).map((txn) => (
+                      <div key={txn.id} className="flex items-center justify-between p-3 rounded-xl bg-secondary/50">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground truncate">{txn.event}</p>
+                          <p className="text-sm text-muted-foreground">{txn.user}</p>
+                        </div>
+                        <div className="text-right ml-4">
+                          <p className="font-semibold text-foreground">${Number(txn.amount).toFixed(2)}</p>
+                          <Badge variant={txn.status === 'completed' ? 'success' : 'secondary'} className="text-xs">
+                            {txn.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                    {(!adminStats?.transactions || adminStats.transactions.length === 0) && (
+                      <p className="text-center text-muted-foreground py-4">No transactions yet</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </div>
+
+          {/* Quick Links */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.6 }}
+          >
+            <Card variant="elevated">
+              <CardHeader>
+                <CardTitle className="text-foreground">Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <Link to="/dashboard/users">
+                    <div className="p-4 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors text-center">
+                      <Users className="w-6 h-6 mx-auto mb-2 text-primary" />
+                      <p className="text-sm font-medium text-foreground">Manage Users</p>
+                    </div>
+                  </Link>
+                  <Link to="/dashboard/admin/events">
+                    <div className="p-4 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors text-center">
+                      <Calendar className="w-6 h-6 mx-auto mb-2 text-primary" />
+                      <p className="text-sm font-medium text-foreground">Manage Events</p>
+                    </div>
+                  </Link>
+                  <Link to="/dashboard/transactions">
+                    <div className="p-4 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors text-center">
+                      <DollarSign className="w-6 h-6 mx-auto mb-2 text-primary" />
+                      <p className="text-sm font-medium text-foreground">Transactions</p>
+                    </div>
+                  </Link>
+                  <Link to="/dashboard/analytics">
+                    <div className="p-4 rounded-xl bg-secondary hover:bg-secondary/80 transition-colors text-center">
+                      <TrendingUp className="w-6 h-6 mx-auto mb-2 text-primary" />
+                      <p className="text-sm font-medium text-foreground">Analytics</p>
+                    </div>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Organizer Dashboard
+  if (user?.role === 'organizer') {
+    return (
+      <DashboardLayout role="organizer">
+        <div className="space-y-8">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Organizer Dashboard</h1>
+            <p className="text-muted-foreground">Welcome back, {user?.name}!</p>
+          </div>
+          <Card variant="elevated">
+            <CardContent className="py-12 text-center">
+              <Calendar className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-lg font-semibold mb-2">Get Started</h3>
+              <p className="text-muted-foreground mb-4">
+                Create your first event and start selling tickets!
+              </p>
+              <Button variant="hero" asChild>
+                <Link to="/dashboard/events/create">Create Event</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Attendee Dashboard (existing code)
+
   return (
-    <DashboardLayout>
+    <DashboardLayout role="attendee">
       <div className="space-y-8">
         {/* Header */}
         <div>
