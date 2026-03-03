@@ -21,7 +21,7 @@ class EventController extends BaseController
      */
     public function index()
     {
-        $events = Event::where('status', 'approved')
+        $events = Event::whereIn('status', ['approved', 'live'])
             ->with('category', 'organizers', 'tickets', 'reviews', 'ticketTypes')
             ->paginate(15);
 
@@ -57,7 +57,7 @@ class EventController extends BaseController
             return $this->notFound('Event not found');
         }
 
-        if ($event->status !== 'approved') {
+        if (!in_array($event->status, ['approved', 'live'])) {
             return $this->notFound('Event not found');
         }
 
