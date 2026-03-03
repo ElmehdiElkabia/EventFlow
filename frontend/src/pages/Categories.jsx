@@ -19,23 +19,66 @@ import {
   Camera,
   Gamepad2,
   Plane,
-  TreePine
+  TreePine,
+  Code,
+  UtensilsCrossed,
+  FolderOpen,
+  BookOpen,
+  Trophy,
+  Film,
+  Megaphone,
+  Users,
+  Sparkles,
+  Coffee,
+  ShoppingBag,
+  Mic,
+  PartyPopper,
+  Theater,
+  Laugh,
+  Wine,
+  Baby,
+  Shirt,
+  Car,
+  Home,
+  Globe,
+  Rocket
 } from "lucide-react";
 
 // Icon mapping for categories
 const iconMap = {
-  'music': Music,
-  'art': Palette,
-  'sports': Dumbbell,
-  'tech': Lightbulb,
-  'food': Utensils,
-  'business': Briefcase,
-  'education': GraduationCap,
-  'charity': Heart,
-  'photography': Camera,
-  'gaming': Gamepad2,
-  'travel': Plane,
-  'outdoor': TreePine,
+  music: Music,
+  palette: Palette,
+  dumbbell: Dumbbell,
+  lightbulb: Lightbulb,
+  utensils: UtensilsCrossed,
+  briefcase: Briefcase,
+  graduation: GraduationCap,
+  heart: Heart,
+  camera: Camera,
+  gamepad: Gamepad2,
+  plane: Plane,
+  code: Code,
+  folder: FolderOpen,
+  book: BookOpen,
+  trophy: Trophy,
+  film: Film,
+  megaphone: Megaphone,
+  users: Users,
+  sparkles: Sparkles,
+  coffee: Coffee,
+  shopping: ShoppingBag,
+  mic: Mic,
+  party: PartyPopper,
+  theater: Theater,
+  laugh: Laugh,
+  wine: Wine,
+  baby: Baby,
+  shirt: Shirt,
+  car: Car,
+  home: Home,
+  globe: Globe,
+  rocket: Rocket,
+  outdoor: TreePine,
 };
 
 // Gradient mapping for categories
@@ -106,7 +149,7 @@ const Categories = () => {
         <div className="container mx-auto max-w-6xl">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {categories.map((category, index) => {
-              const Icon = iconMap[category.name.toLowerCase()] || Music;
+              const Icon = iconMap[category.icon] || Music;
               const gradient = gradientMap[category.name.toLowerCase()] || 'from-pink-500 to-rose-500';
 
               return (
