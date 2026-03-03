@@ -24,6 +24,15 @@ class AttendeeController extends ApiController
     public function store(StoreAttendeeRequest $request)
     {
         try {
+            // Check if attendee already exists
+            $existingAttendee = Attendee::where('user_id', $request->user_id)
+                ->where('event_id', $request->event_id)
+                ->first();
+            
+            if ($existingAttendee) {
+                return $this->errorResponse('User is already registered for this event', 409);
+            }
+            
             $attendee = Attendee::create($request->validated());
             return $this->successResponse(new AttendeeResource($attendee), 'Attendee created successfully', 201);
         } catch (\Exception $e) {
