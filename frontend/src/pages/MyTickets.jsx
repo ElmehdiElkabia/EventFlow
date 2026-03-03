@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { QrCode, Calendar, MapPin, Download, Loader2 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { ticketService } from "@/services/userService";
@@ -33,6 +34,34 @@ const MyTickets = () => {
 
     fetchTickets();
   }, []);
+
+  const handleDownloadQR = (ticketCode, eventTitle) => {
+    const svg = document.getElementById(`qr-${ticketCode}`);
+    if (!svg) return;
+
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    canvas.width = 256;
+    canvas.height = 256;
+    
+    img.onload = () => {
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, 256, 256);
+      ctx.drawImage(img, 0, 0);
+      const pngFile = canvas.toDataURL('image/png');
+      
+      const downloadLink = document.createElement('a');
+      downloadLink.download = `ticket-${ticketCode}.png`;
+      downloadLink.href = pngFile;
+      downloadLink.click();
+      toast.success('QR Code downloaded successfully!');
+    };
+    
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+  };
 
   if (loading) {
     return (
@@ -150,13 +179,24 @@ const MyTickets = () => {
 
                   {/* QR Code Section */}
                   <div className="lg:w-64 p-6 bg-secondary/50 flex flex-col items-center justify-center border-t lg:border-t-0 lg:border-l border-border">
-                    <div className="w-32 h-32 bg-background rounded-xl flex items-center justify-center mb-4">
-                      <QrCode className="w-24 h-24 text-foreground" />
+                    <div className="w-32 h-32 bg-white rounded-xl flex items-center justify-center mb-4 p-2">
+                      <QRCodeSVG
+                        id={`qr-${ticket.qrCode}`}
+                        value={ticket.qrCode || `TICKET-${ticket.id}`}
+                        size={112}
+                        level="H"
+                        includeMargin={false}
+                      />
                     </div>
                     <p className="text-sm text-muted-foreground mb-4">
                       Scan for entry
                     </p>
-                    <Button variant="outline" size="sm" className="w-full">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full"
+                      onClick={() => handleDownloadQR(ticket.qrCode || ticket.id, ticket.eventTitle)}
+                    >
                       <Download className="w-4 h-4 mr-2" />
                       Download
                     </Button>
