@@ -115,7 +115,7 @@ const Transactions = () => {
                     </div>
                   </div>
                   <p className="text-2xl font-bold text-foreground">
-                    ${stats.totalRevenue?.toFixed(2) || '0.00'}
+                    ${Number(stats.totalRevenue || 0).toFixed(2)}
                   </p>
                   <p className="text-sm text-muted-foreground">Total Revenue</p>
                 </CardContent>
@@ -155,7 +155,7 @@ const Transactions = () => {
                     </div>
                   </div>
                   <p className="text-2xl font-bold text-foreground">
-                    ${stats.avgOrderValue?.toFixed(2) || '0.00'}
+                    ${Number(stats.avgOrderValue || 0).toFixed(2)}
                   </p>
                   <p className="text-sm text-muted-foreground">Avg. Order Value</p>
                 </CardContent>

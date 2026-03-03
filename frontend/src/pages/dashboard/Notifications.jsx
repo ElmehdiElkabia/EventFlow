@@ -19,6 +19,7 @@ const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [markingAllAsRead, setMarkingAllAsRead] = useState(false);
 
   useEffect(() => {
     fetchNotifications();
@@ -37,6 +38,33 @@ const Notifications = () => {
       toast.error(errorMsg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleMarkAsRead = async (id) => {
+    try {
+      await userService.markNotificationAsRead(id);
+      setNotifications(prev => 
+        prev.map(n => n.id === id ? { ...n, read_at: new Date().toISOString() } : n)
+      );
+    } catch (err) {
+      console.error('Failed to mark notification as read:', err);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      setMarkingAllAsRead(true);
+      await userService.markAllNotificationsAsRead();
+      setNotifications(prev => 
+        prev.map(n => ({ ...n, read_at: n.read_at || new Date().toISOString() }))
+      );
+      toast.success('All notifications marked as read');
+    } catch (err) {
+      console.error('Failed to mark all as read:', err);
+      toast.error('Failed to mark all as read');
+    } finally {
+      setMarkingAllAsRead(false);
     }
   };
 
@@ -113,6 +141,22 @@ const Notifications = () => {
                 : "You're all caught up!"}
             </p>
           </div>
+          {unreadCount > 0 && (
+            <Button 
+              variant="outline" 
+              onClick={handleMarkAllAsRead}
+              disabled={markingAllAsRead}
+            >
+              {markingAllAsRead ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Marking...
+                </>
+              ) : (
+                'Mark all as read'
+              )}
+            </Button>
+          )}
         </div>
 
         {/* Notifications List */}
@@ -137,9 +181,10 @@ const Notifications = () => {
                 >
                   <Card
                     variant="elevated"
-                    className={`cursor-pointer transition-colors ${
+                    className={`cursor-pointer transition-colors hover:border-primary/30 ${
                       !notification.read_at ? "border-primary/50" : ""
                     }`}
+                    onClick={() => !notification.read_at && handleMarkAsRead(notification.id)}
                   >
                     <CardContent className="p-4">
                       <div className="flex gap-4">

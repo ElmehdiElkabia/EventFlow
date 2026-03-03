@@ -52,9 +52,9 @@ const TicketSales = () => {
         organizerService.getTransactions(),
         organizerService.getMyEvents(),
       ]);
-      setOverview(overviewRes || {});
-      setTransactions(transactionsRes || []);
-      setEvents(eventsRes || []);
+      setOverview(overviewRes?.data || {});
+      setTransactions(transactionsRes?.data || []);
+      setEvents(eventsRes?.data || []);
     } catch (err) {
       console.error('Failed to fetch sales data:', err);
       const errorMsg = err.response?.data?.message || 'Failed to load sales data';

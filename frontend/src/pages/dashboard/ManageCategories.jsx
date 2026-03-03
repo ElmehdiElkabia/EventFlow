@@ -43,6 +43,31 @@ import {
   UtensilsCrossed,
   Loader2,
   AlertCircle,
+  Heart,
+  Gamepad2,
+  BookOpen,
+  Camera,
+  Trophy,
+  Plane,
+  GraduationCap,
+  Film,
+  Megaphone,
+  Users,
+  Sparkles,
+  Coffee,
+  ShoppingBag,
+  Mic,
+  PartyPopper,
+  Theater,
+  Laugh,
+  Wine,
+  Baby,
+  Shirt,
+  Car,
+  Home,
+  Lightbulb,
+  Globe,
+  Rocket,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -56,6 +81,31 @@ const iconMap = {
   dumbbell: Dumbbell,
   utensils: UtensilsCrossed,
   folder: FolderOpen,
+  heart: Heart,
+  gamepad: Gamepad2,
+  book: BookOpen,
+  camera: Camera,
+  trophy: Trophy,
+  plane: Plane,
+  graduation: GraduationCap,
+  film: Film,
+  megaphone: Megaphone,
+  users: Users,
+  sparkles: Sparkles,
+  coffee: Coffee,
+  shopping: ShoppingBag,
+  mic: Mic,
+  party: PartyPopper,
+  theater: Theater,
+  laugh: Laugh,
+  wine: Wine,
+  baby: Baby,
+  shirt: Shirt,
+  car: Car,
+  home: Home,
+  lightbulb: Lightbulb,
+  globe: Globe,
+  rocket: Rocket,
 };
 
 const ManageCategories = () => {
@@ -305,13 +355,13 @@ const ManageCategories = () => {
 
       {/* Edit/Create Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {selectedCategory ? "Edit Category" : "Create Category"}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
               <Input
@@ -323,19 +373,24 @@ const ManageCategories = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="icon">Icon</Label>
-              <div className="flex gap-2 flex-wrap">
+              <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
                 {Object.entries(iconMap).map(([key, Icon]) => (
                   <Button
                     key={key}
                     type="button"
                     variant={formData.icon === key ? "default" : "outline"}
                     size="icon"
+                    className="relative group"
                     onClick={() => setFormData({ ...formData, icon: key })}
+                    title={key.charAt(0).toUpperCase() + key.slice(1)}
                   >
                     <Icon className="w-4 h-4" />
                   </Button>
                 ))}
               </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Selected: {formData.icon}
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
