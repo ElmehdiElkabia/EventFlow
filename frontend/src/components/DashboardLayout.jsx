@@ -1,7 +1,8 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import { userService } from "@/services/userService";
 import {
   Calendar,
   LayoutDashboard,
@@ -54,10 +55,40 @@ const menuItems = {
 
 const DashboardLayout = ({ children, role }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const location = useLocation();
   const { user } = useAuth();
   const currentRole = role || user?.role || "attendee";
   const items = menuItems[currentRole] || [];
+
+  // Fetch unread notifications count
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      // Only fetch notifications for attendees (backend restricts to attendee role)
+      if (!user || user.role !== 'attendee') {
+        setUnreadCount(0);
+        return;
+      }
+
+      try {
+        const response = await userService.getNotifications();
+        const notifications = response?.data || [];
+        const count = notifications.filter((n) => !n.read_at).length;
+        setUnreadCount(count);
+      } catch (err) {
+        console.error('Failed to fetch notifications:', err);
+        setUnreadCount(0);
+      }
+    };
+
+    fetchUnreadCount();
+    
+    if (user && user.role === 'attendee') {
+      // Refresh count every 30 seconds (only for attendees)
+      const interval = setInterval(fetchUnreadCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user, location.pathname]); // Also refresh when route changes
 
   // Get user initials
   const getUserInitials = () => {
@@ -176,11 +207,20 @@ const DashboardLayout = ({ children, role }) => {
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Notifications */}
-              <button className="relative p-2 text-muted-foreground hover:text-foreground rounded-xl hover:bg-secondary">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
-              </button>
+              {/* Notifications - Only for attendees */}
+              {currentRole === 'attendee' && (
+                <Link 
+                  to="/dashboard/notifications"
+                  className="relative p-2 text-muted-foreground hover:text-foreground rounded-xl hover:bg-secondary transition-colors"
+                >
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-primary text-primary-foreground text-xs font-semibold rounded-full flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </Link>
+              )}
 
               {/* Quick Actions */}
               {role === "organizer" && (

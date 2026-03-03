@@ -2,22 +2,79 @@ import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Music, Palette, Briefcase, GraduationCap, Heart, Utensils, Dumbbell, Camera, Loader2 } from "lucide-react";
+import { 
+  Music, 
+  Palette, 
+  Briefcase, 
+  GraduationCap, 
+  Heart, 
+  Utensils, 
+  UtensilsCrossed,
+  Dumbbell, 
+  Camera, 
+  Loader2,
+  Code,
+  FolderOpen,
+  Gamepad2,
+  BookOpen,
+  Trophy,
+  Plane,
+  Film,
+  Megaphone,
+  Users,
+  Sparkles,
+  Coffee,
+  ShoppingBag,
+  Mic,
+  PartyPopper,
+  Theater,
+  Laugh,
+  Wine,
+  Baby,
+  Shirt,
+  Car,
+  Home,
+  Lightbulb,
+  Globe,
+  Rocket,
+} from "lucide-react";
 import { categoryService } from "@/services/publicService";
 import { toast } from "sonner";
 
 // Icon mapping for categories
 const iconMap = {
-  "Music": Music,
-  "Arts": Palette,
-  "Business": Briefcase,
-  "Education": GraduationCap,
-  "Charity": Heart,
-  "Food": Utensils,
-  "Sports": Dumbbell,
-  "Photography": Camera,
-  "Technology": Briefcase,
-  "Health": Heart,
+  music: Music,
+  palette: Palette,
+  briefcase: Briefcase,
+  graduation: GraduationCap,
+  heart: Heart,
+  utensils: UtensilsCrossed,
+  dumbbell: Dumbbell,
+  camera: Camera,
+  code: Code,
+  folder: FolderOpen,
+  gamepad: Gamepad2,
+  book: BookOpen,
+  trophy: Trophy,
+  plane: Plane,
+  film: Film,
+  megaphone: Megaphone,
+  users: Users,
+  sparkles: Sparkles,
+  coffee: Coffee,
+  shopping: ShoppingBag,
+  mic: Mic,
+  party: PartyPopper,
+  theater: Theater,
+  laugh: Laugh,
+  wine: Wine,
+  baby: Baby,
+  shirt: Shirt,
+  car: Car,
+  home: Home,
+  lightbulb: Lightbulb,
+  globe: Globe,
+  rocket: Rocket,
 };
 
 // Color mapping for gradients
@@ -51,7 +108,7 @@ const CategoriesSection = () => {
         // Map categories with icons and colors
         const mappedCategories = categoriesData.map((cat, index) => ({
           ...cat,
-          icon: iconMap[cat.name] || Briefcase,
+          icon: iconMap[cat.icon] || Briefcase,
           color: cat.gradient || colorMap[index % colorMap.length],
         }));
         
