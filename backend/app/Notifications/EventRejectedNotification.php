@@ -24,9 +24,10 @@ class EventRejectedNotification extends Notification
     public function toArray($notifiable)
     {
         return [
+            'type' => 'event',
             'event_id' => $this->event->id,
-            'title' => $this->event->title,
-            'message' => 'Your event has been rejected.',
+            'title' => 'Event Rejected',
+            'message' => 'Your event "' . $this->event->title . '" has been rejected.',
         ];
     }
 }

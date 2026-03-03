@@ -24,9 +24,10 @@ class EventApprovedNotification extends Notification
     public function toArray($notifiable)
     {
         return [
+            'type' => 'event',
             'event_id' => $this->event->id,
-            'title' => $this->event->title,
-            'message' => 'Your event has been approved!',
+            'title' => 'Event Approved',
+            'message' => 'Your event "' . $this->event->title . '" has been approved!',
         ];
     }
 }
