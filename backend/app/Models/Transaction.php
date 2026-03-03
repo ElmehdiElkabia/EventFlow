@@ -20,6 +20,11 @@ class Transaction extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function buyer()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
     public function event()
     {
         return $this->belongsTo(Event::class);
