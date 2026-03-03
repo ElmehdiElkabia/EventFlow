@@ -28,6 +28,7 @@ class TicketController extends BaseController
             ->get()
             ->map(fn($ticket) => [
                 'id' => $ticket->id,
+                'event_id' => $ticket->event_id,
                 'eventTitle' => $ticket->event->title,
                 'date' => optional($ticket->event->start_date)->format('M d, Y'),
                 'time' => optional($ticket->event->start_date)->format('h:i A'),
