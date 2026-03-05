@@ -72,21 +72,65 @@ const CheckIn = () => {
 
     try {
       setScannerError(null);
+      setScanning(true); // Set scanning to true first to render the div
       
-      // Check if browser supports camera
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setScannerError("Camera not supported in this browser");
-        toast.error("Camera not supported in this browser");
+      // Wait for next tick to ensure DOM is updated
+      await new Promise(resolve => setTimeout(resolve, 0));
+      
+      // Check if the element exists
+      const element = document.getElementById("qr-reader");
+      if (!element) {
+        throw new Error("QR reader element not found. Please try again.");
+      }
+      
+      // Check if the page is served over HTTPS or localhost
+      const isSecureContext = window.isSecureContext;
+      if (!isSecureContext) {
+        const errorMsg = "Camera requires HTTPS or localhost. Please use a secure connection.";
+        setScannerError(errorMsg);
+        setScanning(false);
+        toast.error(errorMsg);
         return;
       }
 
-      // Request camera permission
+      // Check if browser supports camera
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        const errorMsg = "Camera not supported in this browser. Please use Chrome, Firefox, or Safari.";
+        setScannerError(errorMsg);
+        setScanning(false);
+        toast.error(errorMsg);
+        return;
+      }
+
+      // Request camera permission explicitly
+      let stream;
       try {
-        await navigator.mediaDevices.getUserMedia({ video: true });
+        stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            facingMode: "environment" // Prefer back camera on mobile
+          } 
+        });
+        // Stop the stream immediately as Html5QrcodeScanner will request it again
+        stream.getTracks().forEach(track => track.stop());
       } catch (permError) {
         console.error("Camera permission error:", permError);
-        setScannerError("Camera access denied. Please allow camera permissions.");
-        toast.error("Camera access denied. Please allow camera permissions in your browser settings.");
+        let errorMsg = "Camera access denied. ";
+        
+        if (permError.name === "NotAllowedError") {
+          errorMsg += "Please allow camera permissions in your browser settings.";
+        } else if (permError.name === "NotFoundError") {
+          errorMsg += "No camera found on this device.";
+        } else if (permError.name === "NotReadableError") {
+          errorMsg += "Camera is already in use by another application.";
+        } else if (permError.name === "OverconstrainedError") {
+          errorMsg += "Camera doesn't meet the requirements.";
+        } else {
+          errorMsg += permError.message || "Unknown camera error.";
+        }
+        
+        setScannerError(errorMsg);
+        setScanning(false);
+        toast.error(errorMsg);
         return;
       }
 
@@ -94,7 +138,9 @@ const CheckIn = () => {
         fps: 10, 
         qrbox: { width: 250, height: 250 },
         aspectRatio: 1.0,
-        formatsToSupport: [0] // QR_CODE
+        formatsToSupport: [0], // QR_CODE
+        rememberLastUsedCamera: true,
+        showTorchButtonIfSupported: true
       };
       
       scannerRef.current = new Html5QrcodeScanner(
@@ -116,13 +162,14 @@ const CheckIn = () => {
         }
       );
 
-      setScanning(true);
       toast.success("Camera started successfully!");
       
     } catch (err) {
       console.error("Failed to start scanner:", err);
-      setScannerError(err.message || "Failed to start camera");
-      toast.error("Failed to start camera: " + (err.message || "Unknown error"));
+      const errorMsg = err.message || "Failed to start camera. Please refresh and try again.";
+      setScannerError(errorMsg);
+      setScanning(false);
+      toast.error(errorMsg);
     }
   };
 
