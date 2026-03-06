@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, MapPin, DollarSign, Users, Image, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
+import { Calendar, MapPin, DollarSign, Users, Image, ArrowLeft, Loader2, AlertCircle, Ticket } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { organizerService } from "@/services/organizerService";
@@ -27,6 +27,11 @@ const EditEvent = () => {
   const [error, setError] = useState(null);
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState("");
+  const [ticketTypes, setTicketTypes] = useState([
+    { name: "General Admission", price: "", quantity: "" }
+  ]);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -34,7 +39,6 @@ const EditEvent = () => {
     endDate: "",
     location: "",
     capacity: "",
-    price: "",
     categoryId: "",
     imageUrl: "",
   });
@@ -49,18 +53,52 @@ const EditEvent = () => {
       setLoading(true);
       setError(null);
       const response = await organizerService.getEvent(id);
-      const event = response || {};
+      const event = response?.data || response || {};
+      
+      console.log('Event data received:', event); // Debug log
+      
+      // Helper function to format datetime for input
+      const formatDatetime = (dateStr) => {
+        if (!dateStr) return "";
+        try {
+          const date = new Date(dateStr);
+          if (isNaN(date.getTime())) return "";
+          // Format as YYYY-MM-DDTHH:MM for datetime-local input
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          const hours = String(date.getHours()).padStart(2, '0');
+          const minutes = String(date.getMinutes()).padStart(2, '0');
+          return `${year}-${month}-${day}T${hours}:${minutes}`;
+        } catch {
+          return "";
+        }
+      };
+      
       setFormData({
         title: event.title || "",
         description: event.description || "",
-        date: event.start_date ? event.start_date.replace(' ', 'T') : "",
-        endDate: event.end_date ? event.end_date.replace(' ', 'T') : "",
+        date: formatDatetime(event.start_date),
+        endDate: formatDatetime(event.end_date),
         location: event.location || "",
-        capacity: String(event.capacity) || "",
-        price: String(event.price || 0),
-        categoryId: String(event.category_id) || "",
+        capacity: event.capacity ? String(event.capacity) : "",
+        categoryId: event.category_id ? String(event.category_id) : "",
         imageUrl: event.image_url || "",
       });
+      
+      // Load ticket types
+      if (event.ticket_types && event.ticket_types.length > 0) {
+        setTicketTypes(event.ticket_types.map(tt => ({
+          name: tt.name || "",
+          price: tt.price ? String(tt.price) : "",
+          quantity: tt.quantity ? String(tt.quantity) : ""
+        })));
+      }
+      
+      // Set image preview if exists
+      if (event.image_url) {
+        setImagePreview(event.image_url);
+      }
     } catch (err) {
       console.error("Failed to fetch event:", err);
       setError(err.response?.data?.message || "Failed to load event");
@@ -73,7 +111,7 @@ const EditEvent = () => {
   const loadCategories = async () => {
     try {
       const response = await categoryService.getCategories();
-      const list = response || [];
+      const list = response?.data || response || [];
       setCategories(Array.isArray(list) ? list : []);
     } catch (err) {
       console.error("Failed to load categories:", err);
@@ -88,30 +126,91 @@ const EditEvent = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleTicketTypeChange = (index, field, value) => {
+    const updated = [...ticketTypes];
+    updated[index][field] = value;
+    setTicketTypes(updated);
+  };
+
+  const addTicketType = () => {
+    setTicketTypes([...ticketTypes, { name: "", price: "", quantity: "" }]);
+  };
+
+  const removeTicketType = (index) => {
+    if (ticketTypes.length > 1) {
+      setTicketTypes(ticketTypes.filter((_, i) => i !== index));
+    } else {
+      toast.error("At least one ticket type is required");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const payload = {
-      title: formData.title,
-      description: formData.description,
-      date: formData.date,
-      end_date: formData.endDate || formData.date,
-      location: formData.location,
-      capacity: Number(formData.capacity) || 0,
-      image: formData.imageUrl,
-      category_id: Number(formData.categoryId),
-      latitude: null,
-      longitude: null,
-    };
-
     try {
-      await organizerService.updateEvent(id, payload);
+      // Validate ticket types
+      const validTicketTypes = ticketTypes.filter(tt => tt.name && tt.price && tt.quantity);
+      if (validTicketTypes.length === 0) {
+        toast.error("Please add at least one valid ticket type");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Calculate total capacity from all ticket types
+      const totalCapacity = validTicketTypes.reduce((sum, tt) => sum + Number(tt.quantity), 0);
+
+      const formDataToSend = new FormData();
+      formDataToSend.append('title', formData.title);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('date', formData.date);
+      formDataToSend.append('end_date', formData.endDate || formData.date);
+      formDataToSend.append('location', formData.location);
+      formDataToSend.append('capacity', totalCapacity);
+      formDataToSend.append('category_id', Number(formData.categoryId));
+      formDataToSend.append('latitude', '');
+      formDataToSend.append('longitude', '');
+      
+      if (imageFile) {
+        formDataToSend.append('image', imageFile);
+      }
+
+      // Append all ticket types
+      validTicketTypes.forEach((ticketType, index) => {
+        formDataToSend.append(`ticket_types[${index}][name]`, ticketType.name);
+        formDataToSend.append(`ticket_types[${index}][price]`, Number(ticketType.price));
+        formDataToSend.append(`ticket_types[${index}][quantity]`, Number(ticketType.quantity));
+      });
+
+      await organizerService.updateEvent(id, formDataToSend);
       toast.success("Event updated successfully!");
       navigate("/dashboard/my-events");
     } catch (err) {
       console.error("Failed to update event:", err);
-      toast.error(err.response?.data?.message || "Failed to update event");
+      console.error("Response data:", err.response?.data);
+      const errorMessage = err.response?.data?.message || "Failed to update event";
+      const errors = err.response?.data?.errors;
+      
+      if (errors) {
+        // Display validation errors
+        Object.keys(errors).forEach(key => {
+          toast.error(`${key}: ${errors[key][0]}`);
+        });
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -282,51 +381,100 @@ const EditEvent = () => {
               </CardContent>
             </Card>
 
-            {/* Tickets & Pricing */}
+            {/* Ticket Types */}
             <Card variant="elevated">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-foreground">
-                  <DollarSign className="w-5 h-5 text-primary" />
-                  Tickets & Pricing
+                  <Ticket className="w-5 h-5 text-primary" />
+                  Ticket Types
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="capacity">Capacity *</Label>
-                    <div className="relative">
-                      <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="capacity"
-                        name="capacity"
-                        type="number"
-                        min="1"
-                        placeholder="100"
-                        value={formData.capacity}
-                        onChange={handleChange}
-                        className="pl-10"
-                        required
-                      />
+                {ticketTypes.map((ticketType, index) => (
+                  <div key={index} className="p-4 border rounded-lg space-y-4 bg-secondary/10">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-foreground">Ticket Type {index + 1}</h4>
+                      {ticketTypes.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeTicketType(index)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor={`ticket-name-${index}`}>Ticket Name *</Label>
+                        <Select
+                          value={ticketType.name}
+                          onValueChange={(value) => handleTicketTypeChange(index, 'name', value)}
+                          required
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select ticket type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="General Admission">General Admission</SelectItem>
+                            <SelectItem value="VIP">VIP</SelectItem>
+                            <SelectItem value="Early Bird">Early Bird</SelectItem>
+                            <SelectItem value="Regular">Regular</SelectItem>
+                            <SelectItem value="Premium">Premium</SelectItem>
+                            <SelectItem value="Student">Student</SelectItem>
+                            <SelectItem value="Senior">Senior</SelectItem>
+                            <SelectItem value="Group">Group</SelectItem>
+                            <SelectItem value="Family">Family</SelectItem>
+                            <SelectItem value="Standard">Standard</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`ticket-price-${index}`}>Price ($) *</Label>
+                        <div className="relative">
+                          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            id={`ticket-price-${index}`}
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="0"
+                            value={ticketType.price}
+                            onChange={(e) => handleTicketTypeChange(index, 'price', e.target.value)}
+                            className="pl-10"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`ticket-quantity-${index}`}>Quantity *</Label>
+                        <div className="relative">
+                          <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            id={`ticket-quantity-${index}`}
+                            type="number"
+                            min="1"
+                            placeholder="100"
+                            value={ticketType.quantity}
+                            onChange={(e) => handleTicketTypeChange(index, 'quantity', e.target.value)}
+                            className="pl-10"
+                            required
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="price">Ticket Price ($)</Label>
-                    <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="price"
-                        name="price"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="0 (Free)"
-                        value={formData.price}
-                        onChange={handleChange}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-                </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addTicketType}
+                  className="w-full"
+                >
+                  + Add Another Ticket Type
+                </Button>
               </CardContent>
             </Card>
 
@@ -340,20 +488,23 @@ const EditEvent = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="imageUrl">Image URL</Label>
+                  <Label htmlFor="image">Upload Image</Label>
                   <Input
-                    id="imageUrl"
-                    name="imageUrl"
-                    type="url"
-                    placeholder="https://example.com/image.jpg"
-                    value={formData.imageUrl}
-                    onChange={handleChange}
+                    id="image"
+                    name="image"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="cursor-pointer"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Upload a new image or keep the existing one
+                  </p>
                 </div>
-                {formData.imageUrl && (
+                {imagePreview && (
                   <div className="relative aspect-video rounded-xl overflow-hidden bg-secondary">
                     <img
-                      src={formData.imageUrl}
+                      src={imagePreview}
                       alt="Event preview"
                       className="w-full h-full object-cover"
                       onError={(e) => {
