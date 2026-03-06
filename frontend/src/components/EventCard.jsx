@@ -48,7 +48,7 @@ const EventCard = ({
             
             {/* Category Badge */}
             <div className="absolute top-3 left-3">
-              <Badge variant="glass">{category}</Badge>
+              <Badge variant="glass">{typeof category === 'object' ? category?.name : category}</Badge>
             </div>
 
             {/* Featured Badge */}
