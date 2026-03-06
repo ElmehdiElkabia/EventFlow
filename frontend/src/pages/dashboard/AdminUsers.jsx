@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -25,6 +26,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Search,
   Users,
@@ -48,6 +57,11 @@ const AdminUsers = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [actionLoading, setActionLoading] = useState(false);
+  const [suspendModal, setSuspendModal] = useState({ open: false, user: null });
+  const [activateModal, setActivateModal] = useState({ open: false, user: null });
+  const [suspensionReason, setSuspensionReason] = useState("");
+  const [emailModal, setEmailModal] = useState({ open: false, user: null });
+  const [emailData, setEmailData] = useState({ subject: "", message: "" });
 
   useEffect(() => {
     fetchUsers();
@@ -64,7 +78,7 @@ const AdminUsers = () => {
         name: user.name,
         email: user.email,
         role: user.role === 'attendee' ? 'user' : user.role, // Map attendee to user for display
-        status: "active", // Backend doesn't provide status
+        status: user.status || 'active', // Use real status from backend
         eventsCreated: 0, // Backend doesn't provide this
         ticketsPurchased: 0, // Backend doesn't provide this
         joinedAt: user.created_at, // Map created_at to joinedAt
@@ -111,9 +125,89 @@ const AdminUsers = () => {
     }
   };
 
-  const handleStatusToggle = (userId) => {
-    // Backend doesn't support status toggle yet
-    toast.info("Status toggle feature coming soon");
+  const handleSuspendUser = async (userId) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    
+    setSuspendModal({ open: true, user });
+  };
+
+  const confirmSuspendUser = async () => {
+    if (!suspendModal.user) return;
+
+    try {
+      setActionLoading(true);
+      await adminService.suspendUser(suspendModal.user.id, suspensionReason || undefined);
+      // Update local state
+      setUsers(users.map((u) => (u.id === suspendModal.user.id ? { ...u, status: 'suspended' } : u)));
+      toast.success(`User ${suspendModal.user.name} has been suspended`);
+      setSuspendModal({ open: false, user: null });
+      setSuspensionReason("");
+    } catch (err) {
+      console.error("Failed to suspend user:", err);
+      toast.error(err.response?.data?.message || "Failed to suspend user");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleActivateUser = async (userId) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    
+    setActivateModal({ open: true, user });
+  };
+
+  const confirmActivateUser = async () => {
+    if (!activateModal.user) return;
+
+    try {
+      setActionLoading(true);
+      await adminService.activateUser(activateModal.user.id);
+      // Update local state
+      setUsers(users.map((u) => (u.id === activateModal.user.id ? { ...u, status: 'active' } : u)));
+      toast.success(`User ${activateModal.user.name} has been activated`);
+      setActivateModal({ open: false, user: null });
+    } catch (err) {
+      console.error("Failed to activate user:", err);
+      toast.error(err.response?.data?.message || "Failed to activate user");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSendEmail = (userId) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    
+    setEmailModal({ open: true, user });
+  };
+
+  const confirmSendEmail = async () => {
+    if (!emailModal.user) return;
+
+    if (!emailData.subject.trim()) {
+      toast.error("Please enter an email subject");
+      return;
+    }
+
+    if (!emailData.message.trim()) {
+      toast.error("Please enter an email message");
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      await adminService.sendEmailToUser(emailModal.user.id, emailData);
+      toast.success(`Email sent to ${emailModal.user.name}`);
+      setEmailModal({ open: false, user: null });
+      setEmailData({ subject: "", message: "" });
+    } catch (err) {
+      console.error("Failed to send email:", err);
+      toast.error(err.response?.data?.message || "Failed to send email");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const getRoleBadge = (role) => {
@@ -329,7 +423,10 @@ const AdminUsers = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem disabled>
+                              <DropdownMenuItem 
+                                onClick={() => handleSendEmail(user.id)}
+                                disabled={actionLoading}
+                              >
                                 <Mail className="w-4 h-4 mr-2" />
                                 Send Email
                               </DropdownMenuItem>
@@ -341,7 +438,7 @@ const AdminUsers = () => {
                                 Make Organizer
                               </DropdownMenuItem>
                               <DropdownMenuItem 
-                                onClick={() => handleStatusToggle(user.id)}
+                                onClick={() => user.status === "active" ? handleSuspendUser(user.id) : handleActivateUser(user.id)}
                                 disabled={actionLoading}
                               >
                                 {user.status === "active" ? (
@@ -378,6 +475,204 @@ const AdminUsers = () => {
         </motion.div>
           </>
         )}
+
+        {/* Suspend User Modal */}
+        <Dialog open={suspendModal.open} onOpenChange={(open) => {
+          if (!open) {
+            setSuspendModal({ open: false, user: null });
+            setSuspensionReason("");
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Ban className="w-5 h-5 text-destructive" />
+                Suspend User
+              </DialogTitle>
+              <DialogDescription>
+                Are you sure you want to suspend <strong>{suspendModal.user?.name}</strong>? 
+                They will be immediately logged out and unable to access the platform.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-2">
+              <label htmlFor="suspension-reason" className="text-sm font-medium">
+                Reason (Optional)
+              </label>
+              <Textarea
+                id="suspension-reason"
+                placeholder="Enter the reason for suspension..."
+                value={suspensionReason}
+                onChange={(e) => setSuspensionReason(e.target.value)}
+                rows={4}
+                className="resize-none"
+              />
+              <p className="text-xs text-muted-foreground">
+                The user will receive an email with this reason.
+              </p>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSuspendModal({ open: false, user: null });
+                  setSuspensionReason("");
+                }}
+                disabled={actionLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmSuspendUser}
+                disabled={actionLoading}
+              >
+                {actionLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Suspending...
+                  </>
+                ) : (
+                  <>
+                    <Ban className="w-4 h-4 mr-2" />
+                    Suspend User
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Activate User Modal */}
+        <Dialog open={activateModal.open} onOpenChange={(open) => {
+          if (!open) {
+            setActivateModal({ open: false, user: null });
+          }
+        }}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <UserCheck className="w-5 h-5 text-green-500" />
+                Activate User
+              </DialogTitle>
+              <DialogDescription>
+                Are you sure you want to activate <strong>{activateModal.user?.name}</strong>? 
+                They will regain full access to the platform.
+              </DialogDescription>
+            </DialogHeader>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setActivateModal({ open: false, user: null })}
+                disabled={actionLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmActivateUser}
+                disabled={actionLoading}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {actionLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Activating...
+                  </>
+                ) : (
+                  <>
+                    <UserCheck className="w-4 h-4 mr-2" />
+                    Activate User
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Send Email Modal */}
+        <Dialog open={emailModal.open} onOpenChange={(open) => {
+          if (!open) {
+            setEmailModal({ open: false, user: null });
+            setEmailData({ subject: "", message: "" });
+          }
+        }}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Mail className="w-5 h-5 text-primary" />
+                Send Email to {emailModal.user?.name}
+              </DialogTitle>
+              <DialogDescription>
+                Send a direct email to <strong>{emailModal.user?.email}</strong>
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="email-subject" className="text-sm font-medium">
+                  Subject *
+                </label>
+                <Input
+                  id="email-subject"
+                  placeholder="Enter email subject..."
+                  value={emailData.subject}
+                  onChange={(e) => setEmailData({ ...emailData, subject: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="email-message" className="text-sm font-medium">
+                  Message *
+                </label>
+                <Textarea
+                  id="email-message"
+                  placeholder="Enter your message..."
+                  value={emailData.message}
+                  onChange={(e) => setEmailData({ ...emailData, message: e.target.value })}
+                  rows={8}
+                  className="resize-none"
+                />
+              </div>
+
+              <div className="bg-secondary/50 p-3 rounded-lg">
+                <p className="text-xs text-muted-foreground">
+                  📧 This email will be sent from the EventFlow platform to the user's registered email address.
+                </p>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEmailModal({ open: false, user: null });
+                  setEmailData({ subject: "", message: "" });
+                }}
+                disabled={actionLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmSendEmail}
+                disabled={actionLoading}
+              >
+                {actionLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="w-4 h-4 mr-2" />
+                    Send Email
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
