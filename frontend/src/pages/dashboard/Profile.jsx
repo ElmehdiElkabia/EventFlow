@@ -19,6 +19,7 @@ import {
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { userService, ticketService } from "@/services/userService";
+import { authService } from "@/services/authService";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Profile = () => {
@@ -47,12 +48,12 @@ const Profile = () => {
       setError(null);
 
       const [profileRes, ticketsRes, reviewsRes] = await Promise.all([
-        userService.getProfile(),
+        authService.me(),
         ticketService.getMyTickets(),
         userService.getReviews(),
       ]);
 
-      setProfile(profileRes || {});
+      setProfile(profileRes.data || {});
       setTickets(ticketsRes || []);
       setReviews(reviewsRes || []);
     } catch (err) {
@@ -68,10 +69,16 @@ const Profile = () => {
   const handleSave = async () => {
     try {
       setSaving(true);
-      await userService.updateProfile({
+      const response = await authService.updateProfile({
         name: profile.name,
         email: profile.email,
       });
+      
+      // Update profile with response data
+      if (response.data) {
+        setProfile(response.data);
+        localStorage.setItem('user', JSON.stringify(response.data));
+      }
       
       setIsEditing(false);
       toast.success("Profile updated successfully");
