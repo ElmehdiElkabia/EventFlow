@@ -32,6 +32,7 @@ const EventDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [ticketCount, setTicketCount] = useState(1);
+  const [selectedTicketType, setSelectedTicketType] = useState(null);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [purchasing, setPurchasing] = useState(false);
 
@@ -44,6 +45,11 @@ const EventDetail = () => {
         
         // API returns: { success: true, message: "Success", data: {...} }
         setEventData(response.data);
+        
+        // Set initial selected ticket type
+        if (response.data?.ticketTypes && response.data.ticketTypes.length > 0) {
+          setSelectedTicketType(response.data.ticketTypes[0]);
+        }
       } catch (err) {
         console.error('Error fetching event:', err);
         setError(err.response?.data?.message || 'Failed to load event');
@@ -91,7 +97,7 @@ const EventDetail = () => {
   }
 
   const spotsLeft = eventData.capacity - eventData.highlights.attendees;
-  const totalPrice = (eventData.ticketTypes?.[0]?.price || 0) * ticketCount;
+  const totalPrice = (selectedTicketType?.price || 0) * ticketCount;
 
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href);
@@ -111,25 +117,25 @@ const EventDetail = () => {
       return;
     }
 
-    // Validate ticket types
-    if (!eventData.ticketTypes || eventData.ticketTypes.length === 0) {
-      toast.error("No ticket types available for this event");
+    // Validate ticket type selection
+    if (!selectedTicketType) {
+      toast.error("Please select a ticket type");
       return;
     }
 
-    // Check availability
-    if (spotsLeft < ticketCount) {
-      toast.error(`Only ${spotsLeft} tickets remaining`);
+    // Check availability for selected ticket type
+    const ticketTypeAvailable = selectedTicketType.available || 0;
+    if (ticketTypeAvailable < ticketCount) {
+      toast.error(`Only ${ticketTypeAvailable} ${selectedTicketType.name} tickets remaining`);
       return;
     }
 
     try {
       setPurchasing(true);
       
-      const ticketType = eventData.ticketTypes[0];
       const purchaseData = {
         event_id: parseInt(id),
-        ticket_type_id: ticketType.id,
+        ticket_type_id: selectedTicketType.id,
         quantity: ticketCount,
         amount: totalPrice,
       };
@@ -148,7 +154,19 @@ const EventDetail = () => {
     } catch (err) {
       console.error('Failed to purchase tickets:', err);
       const errorMsg = err.response?.data?.message || 'Failed to purchase tickets';
-      toast.error(errorMsg);
+      
+      // Show specific message for organizers
+      if (errorMsg.includes('Organizers cannot') || errorMsg.includes('organizers cannot')) {
+        toast.error("Cannot Purchase Tickets", {
+          description: "As an organizer of this event, you cannot purchase tickets. Only attendees can buy tickets for this event.",
+          duration: 6000,
+        });
+      } else {
+        toast.error("Unable to Purchase Tickets", {
+          description: errorMsg,
+          duration: 4000,
+        });
+      }
     } finally {
       setPurchasing(false);
     }
@@ -350,11 +368,47 @@ const EventDetail = () => {
               >
                 <Card variant="elevated" className="overflow-hidden">
                   <CardContent className="p-6">
+                    {/* Ticket Type Selector */}
+                    {eventData.ticketTypes && eventData.ticketTypes.length > 0 && (
+                      <div className="mb-6">
+                        <label className="text-sm text-muted-foreground mb-2 block">
+                          Select Ticket Type
+                        </label>
+                        <div className="space-y-2">
+                          {eventData.ticketTypes.map((ticketType) => (
+                            <button
+                              key={ticketType.id}
+                              onClick={() => setSelectedTicketType(ticketType)}
+                              className={`w-full p-3 rounded-lg border-2 transition-all text-left ${
+                                selectedTicketType?.id === ticketType.id
+                                  ? 'border-primary bg-primary/10'
+                                  : 'border-border hover:border-primary/50'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="font-medium text-foreground">{ticketType.name}</p>
+                                  <p className="text-sm text-muted-foreground">
+                                    ${ticketType.price} per ticket
+                                  </p>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-sm text-muted-foreground">
+                                    {ticketType.available || 0} available
+                                  </p>
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex items-center justify-between mb-6">
                       <div>
                         <p className="text-sm text-muted-foreground">Price per ticket</p>
                         <p className="text-3xl font-bold text-foreground">
-                          ${eventData.ticketTypes?.[0]?.price || 0}
+                          ${selectedTicketType?.price || 0}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 text-muted-foreground">
