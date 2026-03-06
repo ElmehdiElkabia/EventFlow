@@ -18,7 +18,7 @@ const Events = () => {
   const [loading, setLoading] = useState(true);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "All");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
@@ -30,6 +30,15 @@ const Events = () => {
         const response = await categoryService.getCategories();
         const categoriesData = response.data || [];
         setCategories([{ id: "all", name: "All" }, ...categoriesData]);
+        
+        // Set selected category from URL params
+        const categoryParam = searchParams.get("category");
+        if (categoryParam && categoryParam !== "all") {
+          const category = categoriesData.find(cat => cat.id === parseInt(categoryParam));
+          if (category) {
+            setSelectedCategory(category.id.toString());
+          }
+        }
       } catch (err) {
         console.error('Error fetching categories:', err);
       } finally {
@@ -38,7 +47,7 @@ const Events = () => {
     };
 
     fetchCategories();
-  }, []);
+  }, [searchParams]);
 
   // Fetch events
   useEffect(() => {
@@ -73,12 +82,14 @@ const Events = () => {
       event.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       event.location.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesCategory = selectedCategory === "All" || 
-      event.category?.name === selectedCategory || 
+    const matchesCategory = selectedCategory === "all" || 
       event.category?.id === parseInt(selectedCategory);
     
     return matchesSearch && matchesCategory;
   });
+
+  // Get selected category name for display
+  const selectedCategoryName = categories.find(cat => cat.id.toString() === selectedCategory)?.name || "All";
 
   return (
     <div className="min-h-screen bg-background dark">
@@ -116,7 +127,7 @@ const Events = () => {
                   placeholder="Search events, venues, or categories..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-12 h-12 bg-card"
+                  className="pl-12 h-12 bg-card text-foreground"
                 />
                 {searchQuery && (
                   <button
@@ -140,9 +151,9 @@ const Events = () => {
                 {categories.map((category) => (
                   <button
                     key={category.id}
-                    onClick={() => setSelectedCategory(category.name)}
+                    onClick={() => setSelectedCategory(category.id.toString())}
                     className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                      selectedCategory === category.name
+                      selectedCategory === category.id.toString()
                         ? "bg-primary text-primary-foreground"
                         : "bg-card border border-border text-muted-foreground hover:text-foreground hover:border-primary/50"
                     }`}
@@ -159,9 +170,9 @@ const Events = () => {
             <p className="text-muted-foreground">
               Showing <span className="text-foreground font-medium">{filteredEvents.length}</span> events
             </p>
-            {selectedCategory !== "All" && (
-              <Badge variant="outline" className="cursor-pointer" onClick={() => setSelectedCategory("All")}>
-                {selectedCategory}
+            {selectedCategory !== "all" && (
+              <Badge variant="outline" className="cursor-pointer" onClick={() => setSelectedCategory("all")}>
+                {selectedCategoryName}
                 <X className="w-3 h-3 ml-1" />
               </Badge>
             )}
@@ -209,7 +220,7 @@ const Events = () => {
               ) : (
                 <div className="text-center py-16">
                   <p className="text-muted-foreground text-lg mb-4">No events found</p>
-                  <Button variant="outline" onClick={() => { setSearchQuery(""); setSelectedCategory("All"); }}>
+                  <Button variant="outline" onClick={() => { setSearchQuery(""); setSelectedCategory("all"); }}>
                     Clear Filters
                   </Button>
                 </div>
