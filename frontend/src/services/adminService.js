@@ -137,6 +137,53 @@ const adminService = {
   },
 
   /**
+   * Suspend a user
+   * @param {number} id - User ID
+   * @param {string} reason - Suspension reason (optional)
+   * @returns {Promise<Object>} Updated user
+   */
+  suspendUser: async (id, reason = null) => {
+    try {
+      const response = await api.patch(`/admin/users/${id}/suspend`, { reason });
+      return response?.data || {};
+    } catch (error) {
+      console.error("Failed to suspend user:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Activate a suspended user
+   * @param {number} id - User ID
+   * @returns {Promise<Object>} Updated user
+   */
+  activateUser: async (id) => {
+    try {
+      const response = await api.patch(`/admin/users/${id}/activate`);
+      return response?.data || {};
+    } catch (error) {
+      console.error("Failed to activate user:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Send email to a user
+   * @param {number} id - User ID
+   * @param {Object} emailData - Email data (subject, message)
+   * @returns {Promise<Object>} Success response
+   */
+  sendEmailToUser: async (id, emailData) => {
+    try {
+      const response = await api.post(`/admin/users/${id}/send-email`, emailData);
+      return response?.data || {};
+    } catch (error) {
+      console.error("Failed to send email:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Get all transactions
    * @returns {Promise<Array>} Array of transactions
    */
@@ -160,6 +207,80 @@ const adminService = {
       return response?.data || {};
     } catch (error) {
       console.error("Failed to fetch transaction stats:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get all refund requests
+   * @returns {Promise<Array>} Array of refund requests
+   */
+  getRefunds: async () => {
+    try {
+      const response = await api.get('/admin/refunds');
+      return response?.data || [];
+    } catch (error) {
+      console.error("Failed to fetch refunds:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get refund statistics
+   * @returns {Promise<Object>} Refund stats (pending, approved, rejected, totalAmount)
+   */
+  getRefundStats: async () => {
+    try {
+      const response = await api.get('/admin/refunds/stats');
+      return response?.data || {};
+    } catch (error) {
+      console.error("Failed to fetch refund stats:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Approve a refund request
+   * @param {string} id - Refund ID
+   * @param {string} adminNotes - Admin notes (optional)
+   * @returns {Promise<Object>} Updated refund
+   */
+  approveRefund: async (id, adminNotes = null) => {
+    try {
+      const response = await api.patch(`/admin/refunds/${id}/approve`, { admin_notes: adminNotes });
+      return response?.data || {};
+    } catch (error) {
+      console.error("Failed to approve refund:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Reject a refund request
+   * @param {string} id - Refund ID
+   * @param {string} adminNotes - Rejection reason (required)
+   * @returns {Promise<Object>} Updated refund
+   */
+  rejectRefund: async (id, adminNotes) => {
+    try {
+      const response = await api.patch(`/admin/refunds/${id}/reject`, { admin_notes: adminNotes });
+      return response?.data || {};
+    } catch (error) {
+      console.error("Failed to reject refund:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get analytics data
+   * @returns {Promise<Object>} Analytics data (stats, charts, top events)
+   */
+  getAnalytics: async () => {
+    try {
+      const response = await api.get('/admin/analytics');
+      return response?.data || {};
+    } catch (error) {
+      console.error("Failed to fetch analytics:", error);
       throw error;
     }
   },
