@@ -46,7 +46,6 @@ const menuItems = {
   attendee: [
     { icon: LayoutDashboard, label: "Overview", path: "/dashboard" },
     { icon: Ticket, label: "My Tickets", path: "/dashboard/tickets" },
-    { icon: Calendar, label: "Upcoming Events", path: "/dashboard/upcoming" },
     { icon: MessageSquare, label: "My Reviews", path: "/dashboard/reviews" },
     { icon: Bell, label: "Notifications", path: "/dashboard/notifications" },
     { icon: Settings, label: "Settings", path: "/dashboard/settings" },
