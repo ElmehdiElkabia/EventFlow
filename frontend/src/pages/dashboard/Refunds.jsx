@@ -19,91 +19,64 @@ import { motion } from "framer-motion";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-
-const mockRefunds = [
-  {
-    id: "REF001",
-    user: "Eva Martinez",
-    email: "eva@example.com",
-    event: "Tech Innovation Summit",
-    amount: 299.0,
-    reason: "Unable to attend due to schedule conflict",
-    status: "pending",
-    requestedAt: "2024-12-10T09:30:00",
-    ticketCode: "TIX-ABC123",
-  },
-  {
-    id: "REF002",
-    user: "Frank Wilson",
-    email: "frank@example.com",
-    event: "Electronic Music Festival",
-    amount: 150.0,
-    reason: "Event cancelled by organizer",
-    status: "approved",
-    requestedAt: "2024-12-09T14:20:00",
-    ticketCode: "TIX-DEF456",
-  },
-  {
-    id: "REF003",
-    user: "Grace Lee",
-    email: "grace@example.com",
-    event: "Art Exhibition Opening",
-    amount: 45.0,
-    reason: "Medical emergency",
-    status: "approved",
-    requestedAt: "2024-12-08T11:45:00",
-    ticketCode: "TIX-GHI789",
-  },
-  {
-    id: "REF004",
-    user: "Henry Chen",
-    email: "henry@example.com",
-    event: "Startup Pitch Competition",
-    amount: 0.0,
-    reason: "Changed mind",
-    status: "rejected",
-    requestedAt: "2024-12-07T16:00:00",
-    ticketCode: "TIX-JKL012",
-  },
-];
-
-const stats = [
-  { title: "Pending", value: 12, icon: Clock, color: "text-amber-400" },
-  { title: "Approved", value: 45, icon: Check, color: "text-emerald-400" },
-  { title: "Rejected", value: 8, icon: X, color: "text-red-400" },
-  { title: "Total Amount", value: "$4,521", icon: DollarSign, color: "text-primary" },
-];
+import adminService from "@/services/adminService";
 
 const Refunds = () => {
-  const [refunds, setRefunds] = useState(mockRefunds);
+  const [refunds, setRefunds] = useState([]);
+  const [stats, setStats] = useState({
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+    totalAmount: "$0.00"
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRefund, setSelectedRefund] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [adminNotes, setAdminNotes] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // TODO: Implement API integration when backend refund routes are available
-  // useEffect(() => {
-  //   fetchRefunds();
-  // }, []);
+  useEffect(() => {
+    fetchRefunds();
+    fetchStats();
+  }, []);
 
-  // const fetchRefunds = async () => {
-  //   try {
-  //     setLoading(true);
-  //     const response = await adminService.getRefunds();
-  //     setRefunds(response || []);
-  //   } catch (err) {
-  //     console.error('Failed to fetch refunds:', err);
-  //     toast.error(err.response?.data?.message || 'Failed to load refunds');
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
+  const fetchRefunds = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await adminService.getRefunds();
+      setRefunds(response || []);
+    } catch (err) {
+      console.error('Failed to fetch refunds:', err);
+      setError(err.response?.data?.message || 'Failed to load refunds');
+      toast.error(err.response?.data?.message || 'Failed to load refunds');
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const fetchStats = async () => {
+    try {
+      const response = await adminService.getRefundStats();
+      setStats({
+        pending: response.pending || 0,
+        approved: response.approved || 0,
+        rejected: response.rejected || 0,
+        totalAmount: `$${response.totalAmount || '0.00'}`
+      });
+    } catch (err) {
+      console.error('Failed to fetch refund stats:', err);
+    }
+  };
   const filteredRefunds = refunds.filter(
     (r) =>
       r.user.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -111,21 +84,45 @@ const Refunds = () => {
       r.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleApprove = (id) => {
-    setRefunds(refunds.map((r) => (r.id === id ? { ...r, status: "approved" } : r)));
-    toast.success("Refund approved successfully");
-    setDialogOpen(false);
+  const handleApprove = async (id) => {
+    try {
+      setActionLoading(true);
+      await adminService.approveRefund(id, adminNotes || undefined);
+      // Update local state
+      setRefunds(refunds.map((r) => (r.id === id ? { ...r, status: "approved" } : r)));
+      await fetchStats(); // Refresh stats
+      toast.success("Refund approved successfully");
+      setDialogOpen(false);
+      setAdminNotes("");
+    } catch (err) {
+      console.error("Failed to approve refund:", err);
+      toast.error(err.response?.data?.message || "Failed to approve refund");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
-  const handleReject = (id) => {
-    if (!rejectionReason) {
+  const handleReject = async (id) => {
+    if (!rejectionReason.trim()) {
       toast.error("Please provide a rejection reason");
       return;
     }
-    setRefunds(refunds.map((r) => (r.id === id ? { ...r, status: "rejected" } : r)));
-    toast.success("Refund rejected");
-    setDialogOpen(false);
-    setRejectionReason("");
+    
+    try {
+      setActionLoading(true);
+      await adminService.rejectRefund(id, rejectionReason);
+      // Update local state
+      setRefunds(refunds.map((r) => (r.id === id ? { ...r, status: "rejected" } : r)));
+      await fetchStats(); // Refresh stats
+      toast.success("Refund rejected");
+      setDialogOpen(false);
+      setRejectionReason("");
+    } catch (err) {
+      console.error("Failed to reject refund:", err);
+      toast.error(err.response?.data?.message || "Failed to reject refund");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -146,6 +143,13 @@ const Refunds = () => {
     setDialogOpen(true);
   };
 
+  const statsData = [
+    { title: "Pending", value: stats.pending, icon: Clock, color: "text-amber-400" },
+    { title: "Approved", value: stats.approved, icon: Check, color: "text-emerald-400" },
+    { title: "Rejected", value: stats.rejected, icon: X, color: "text-red-400" },
+    { title: "Total Amount", value: stats.totalAmount, icon: DollarSign, color: "text-primary" },
+  ];
+
   return (
     <DashboardLayout role="admin">
       <div className="space-y-6">
@@ -155,9 +159,30 @@ const Refunds = () => {
           <p className="text-muted-foreground">Review and manage refund requests</p>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          {stats.map((stat, index) => (
+        {/* Loading state */}
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 animate-spin text-muted-foreground mx-auto mb-2" />
+              <p className="text-muted-foreground">Loading refunds...</p>
+            </div>
+          </div>
+        ) : error ? (
+          /* Error state */
+          <Card className="border-destructive bg-destructive/5">
+            <CardContent className="p-6 text-center">
+              <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+              <p className="text-destructive mb-4">{error}</p>
+              <Button variant="outline" onClick={fetchRefunds}>
+                Retry
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            {/* Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              {statsData.map((stat, index) => (
             <motion.div
               key={stat.title}
               initial={{ opacity: 0, y: 20 }}
@@ -301,13 +326,17 @@ const Refunds = () => {
 
                 <div>
                   <label className="text-sm font-medium text-foreground">
-                    Rejection Reason (if rejecting)
+                    Admin Notes (Optional for approval, required for rejection)
                   </label>
                   <Textarea
-                    value={rejectionReason}
-                    onChange={(e) => setRejectionReason(e.target.value)}
-                    placeholder="Provide a reason for rejection..."
+                    value={selectedRefund.status === "pending" && rejectionReason ? rejectionReason : adminNotes}
+                    onChange={(e) => {
+                      setRejectionReason(e.target.value);
+                      setAdminNotes(e.target.value);
+                    }}
+                    placeholder="Add notes about this refund decision..."
                     className="mt-1"
+                    rows={3}
                   />
                 </div>
 
@@ -316,23 +345,44 @@ const Refunds = () => {
                     variant="outline"
                     className="flex-1 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
                     onClick={() => handleReject(selectedRefund.id)}
+                    disabled={actionLoading}
                   >
-                    <X className="w-4 h-4 mr-2" />
-                    Reject
+                    {actionLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Rejecting...
+                      </>
+                    ) : (
+                      <>
+                        <X className="w-4 h-4 mr-2" />
+                        Reject
+                      </>
+                    )}
                   </Button>
                   <Button
-                    variant="hero"
-                    className="flex-1"
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700"
                     onClick={() => handleApprove(selectedRefund.id)}
+                    disabled={actionLoading}
                   >
-                    <Check className="w-4 h-4 mr-2" />
-                    Approve
+                    {actionLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Approving...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4 mr-2" />
+                        Approve
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
             )}
           </DialogContent>
         </Dialog>
+          </>
+        )}
       </div>
     </DashboardLayout>
   );
