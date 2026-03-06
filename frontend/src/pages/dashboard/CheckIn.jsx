@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import DashboardLayout from "@/components/DashboardLayout";
 import { attendeeService } from "@/services/attendeeService";
 import { Html5QrcodeScanner } from "html5-qrcode";
-import { Camera, CheckCircle2, Loader2, QrCode, Search, Ticket, Users } from "lucide-react";
+import { Camera, CheckCircle2, Loader2, QrCode, Search, Ticket, Users, RefreshCcw } from "lucide-react";
 
 const CheckIn = () => {
   const { id: eventId } = useParams();
@@ -266,7 +266,7 @@ const CheckIn = () => {
               <Link to="/dashboard/my-events">Back to Events</Link>
             </Button>
             <Button onClick={loadData} variant="outline">
-              <Search className="w-4 h-4 mr-2" />
+              <RefreshCcw className="w-4 h-4 mr-2" />
               Refresh
             </Button>
             <Button onClick={scanning ? stopScanner : startScanner} variant={scanning ? "destructive" : "default"}>
