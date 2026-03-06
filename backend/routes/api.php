@@ -2,7 +2,8 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Api\Auth\AuthController as ApiAuthController;
 use App\Http\Controllers\Api\Public\EventController;
 use App\Http\Controllers\Api\Public\CategoryController;
 use App\Http\Controllers\Api\Organizer\OrganizerEventController;
@@ -18,6 +19,9 @@ use App\Http\Controllers\Api\Admin\AdminUserController;
 use App\Http\Controllers\Api\Admin\AdminCategoryController;
 use App\Http\Controllers\Api\Admin\AdminAnalyticsController;
 use App\Http\Controllers\Api\Admin\AdminTransactionController;
+use App\Http\Controllers\Api\Admin\AdminRefundController;
+use App\Http\Controllers\Api\PaymentMethodController;
+use App\Http\Controllers\Api\BillingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -35,6 +39,9 @@ use App\Http\Controllers\Api\Admin\AdminTransactionController;
 
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/auth/register', [AuthController::class, 'register']);
+Route::post('/auth/forgot-password', [AuthController::class, 'forgotPassword']);
+Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
+Route::get('/auth/verify-email/{id}/{hash}', [AuthController::class, 'verifyEmail'])->name('verification.verify');
 
 // Events & Categories (public browsing)
 Route::get('/events', [EventController::class, 'index']);
@@ -50,6 +57,27 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auth
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me', [AuthController::class, 'me']);
+    Route::post('/auth/resend-verification', [AuthController::class, 'resendVerification']);
+    Route::patch('/auth/profile', [AuthController::class, 'updateProfile']);
+    Route::patch('/auth/password', [AuthController::class, 'updatePassword']);
+    
+    // Payment Methods (All authenticated users)
+    Route::prefix('payment-methods')->group(function () {
+        Route::get('/', [PaymentMethodController::class, 'index']);
+        Route::post('/', [PaymentMethodController::class, 'store']);
+        Route::patch('/{id}', [PaymentMethodController::class, 'update']);
+        Route::patch('/{id}/set-default', [PaymentMethodController::class, 'setDefault']);
+        Route::delete('/{id}', [PaymentMethodController::class, 'destroy']);
+    });
+
+    // Billing (All authenticated users)
+    Route::prefix('billing')->group(function () {
+        Route::get('/summary', [BillingController::class, 'summary']);
+        Route::get('/transactions', [BillingController::class, 'transactions']);
+        Route::get('/address', [BillingController::class, 'getAddress']);
+        Route::post('/address', [BillingController::class, 'updateAddress']);
+        Route::get('/transactions/{id}/receipt', [BillingController::class, 'downloadReceipt']);
+    });
     
     // ============================================
     // ORGANIZER ROUTES
@@ -112,6 +140,9 @@ Route::middleware('auth:sanctum')->group(function () {
         // Users
         Route::get('/users', [AdminUserController::class, 'index']);
         Route::patch('/users/{id}/role', [AdminUserController::class, 'updateRole']);
+        Route::patch('/users/{id}/suspend', [AdminUserController::class, 'suspend']);
+        Route::patch('/users/{id}/activate', [AdminUserController::class, 'activate']);
+        Route::post('/users/{id}/send-email', [AdminUserController::class, 'sendEmail']);
         
         // Categories
         Route::get('/categories', [AdminCategoryController::class, 'index']);
@@ -125,5 +156,11 @@ Route::middleware('auth:sanctum')->group(function () {
         // Transactions
         Route::get('/transactions', [AdminTransactionController::class, 'index']);
         Route::get('/transactions/stats', [AdminTransactionController::class, 'stats']);
+        
+        // Refunds
+        Route::get('/refunds', [AdminRefundController::class, 'index']);
+        Route::get('/refunds/stats', [AdminRefundController::class, 'stats']);
+        Route::patch('/refunds/{id}/approve', [AdminRefundController::class, 'approve']);
+        Route::patch('/refunds/{id}/reject', [AdminRefundController::class, 'reject']);
     });
 });
