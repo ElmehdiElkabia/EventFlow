@@ -233,7 +233,9 @@ const Attendees = () => {
                           <TableCell className="font-mono text-sm">
                             {attendee.ticketCode}
                           </TableCell>
-                          <TableCell>{attendee.event}</TableCell>
+                          <TableCell>
+                            {typeof attendee.event === 'object' ? attendee.event?.title : attendee.event}
+                          </TableCell>
                           <TableCell>
                             {new Date(attendee.purchaseDate).toLocaleDateString()}
                           </TableCell>
