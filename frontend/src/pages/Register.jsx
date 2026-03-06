@@ -34,7 +34,9 @@ const Register = () => {
 
     try {
       await register({ name, email, password, password_confirmation: passwordConfirmation, role });
-      toast.success("Account created successfully!");
+      toast.success("Account created successfully! Please check your email to verify your account.", {
+        duration: 5000,
+      });
       navigate("/dashboard");
     } catch (error) {
       console.error("Registration error:", error);
