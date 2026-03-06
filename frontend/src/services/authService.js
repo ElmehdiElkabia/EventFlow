@@ -15,7 +15,7 @@ export const authService = {
   login: async (email, password) => {
     const response = await api.post('/auth/login', { email, password });
     
-    // Store token and user in localStorage
+    // Store token and user in localStorage (response already unwrapped by interceptor)
     if (response.data?.token) {
       localStorage.setItem('auth_token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
@@ -32,7 +32,7 @@ export const authService = {
   register: async (userData) => {
     const response = await api.post('/auth/register', userData);
     
-    // Store token and user in localStorage
+    // Store token and user in localStorage (response already unwrapped by interceptor)
     if (response.data?.token) {
       localStorage.setItem('auth_token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
@@ -80,5 +80,59 @@ export const authService = {
   getCurrentUser: () => {
     const userStr = localStorage.getItem('user');
     return userStr ? JSON.parse(userStr) : null;
+  },
+
+  /**
+   * Resend email verification
+   * @returns {Promise} API response
+   */
+  resendVerification: async () => {
+    return await api.post('/auth/resend-verification');
+  },
+
+  /**
+   * Send password reset link
+   * @param {string} email - User email
+   * @returns {Promise} API response
+   */
+  forgotPassword: async (email) => {
+    return await api.post('/auth/forgot-password', { email });
+  },
+
+  /**
+   * Reset password with token
+   * @param {Object} data - Reset data (token, email, password, password_confirmation)
+   * @returns {Promise} API response
+   */
+  resetPassword: async (data) => {
+    return await api.post('/auth/reset-password', data);
+  },
+
+  /**
+   * Verify email with token
+   * @param {string} id - User ID
+   * @param {string} hash - Verification hash
+   * @returns {Promise} API response
+   */
+  verifyEmail: async (id, hash) => {
+    return await api.get(`/auth/verify-email/${id}/${hash}`);
+  },
+
+  /**
+   * Update user profile
+   * @param {Object} data - Profile data (name, email)
+   * @returns {Promise} API response
+   */
+  updateProfile: async (data) => {
+    return await api.patch('/auth/profile', data);
+  },
+
+  /**
+   * Update user password
+   * @param {Object} data - Password data (current_password, new_password, new_password_confirmation)
+   * @returns {Promise} API response
+   */
+  updatePassword: async (data) => {
+    return await api.patch('/auth/password', data);
   },
 };
