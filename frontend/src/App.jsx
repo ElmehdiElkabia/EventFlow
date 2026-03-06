@@ -7,6 +7,9 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import VerifyEmail from "./pages/VerifyEmail";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Events from "./pages/Events";
 import EventDetail from "./pages/EventDetail";
 import Dashboard from "./pages/Dashboard";
@@ -33,7 +36,6 @@ import Settings from "./pages/dashboard/Settings";
 import Transactions from "./pages/dashboard/Transactions";
 import Refunds from "./pages/dashboard/Refunds";
 import Profile from "./pages/dashboard/Profile";
-import UpcomingEvents from "./pages/dashboard/UpcomingEvents";
 import MyReviews from "./pages/dashboard/MyReviews";
 import Notifications from "./pages/dashboard/Notifications";
 
@@ -49,6 +51,9 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/verify-email/:id/:hash" element={<VerifyEmail />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/events" element={<Events />} />
 		  <Route path="/categories" element={<Categories />} />
 		  <Route path="/about" element={<About />} />
@@ -61,6 +66,7 @@ const App = () => (
           <Route path="/dashboard/my-events" element={<ProtectedRoute allowedRoles={["organizer"]}><MyEvents /></ProtectedRoute>} />
           <Route path="/dashboard/events/create" element={<ProtectedRoute allowedRoles={["organizer"]}><CreateEvent /></ProtectedRoute>} />
           <Route path="/dashboard/edit-event/:id" element={<ProtectedRoute allowedRoles={["organizer"]}><EditEvent /></ProtectedRoute>} />
+          <Route path="/dashboard/events/:id/edit" element={<ProtectedRoute allowedRoles={["organizer"]}><EditEvent /></ProtectedRoute>} />
           <Route path="/dashboard/events/:id/check-in" element={<ProtectedRoute allowedRoles={["organizer"]}><CheckIn /></ProtectedRoute>} />
           <Route path="/dashboard/events/:id/attendees" element={<ProtectedRoute allowedRoles={["organizer"]}><Attendees /></ProtectedRoute>} />
           <Route path="/dashboard/sales" element={<ProtectedRoute allowedRoles={["organizer"]}><TicketSales /></ProtectedRoute>} />
@@ -80,7 +86,6 @@ const App = () => (
           <Route path="/dashboard/announcements" element={<ProtectedRoute allowedRoles={["organizer"]}><Announcements /></ProtectedRoute>} />
           
           {/* User Dashboard */}
-          <Route path="/dashboard/upcoming" element={<ProtectedRoute allowedRoles={["attendee"]}><UpcomingEvents /></ProtectedRoute>} />
           <Route path="/dashboard/reviews" element={<ProtectedRoute allowedRoles={["attendee"]}><MyReviews /></ProtectedRoute>} />
           <Route path="/dashboard/notifications" element={<ProtectedRoute allowedRoles={["attendee"]}><Notifications /></ProtectedRoute>} />
           
