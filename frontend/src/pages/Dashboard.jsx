@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
+import EmailVerificationBanner from "@/components/EmailVerificationBanner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -115,11 +116,6 @@ const Dashboard = () => {
       icon: Ticket,
     },
     {
-      title: "Upcoming Events",
-      value: tickets.filter(t => t.status === 'valid').length.toString(),
-      icon: Calendar,
-    },
-    {
       title: "Reviews Written",
       value: reviews.length.toString(),
       icon: Star,
@@ -169,6 +165,9 @@ const Dashboard = () => {
     return (
       <DashboardLayout role="admin">
         <div className="space-y-8">
+          {/* Email Verification Banner */}
+          <EmailVerificationBanner />
+
           {/* Header */}
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Admin Dashboard</h1>
@@ -368,6 +367,9 @@ const Dashboard = () => {
     return (
       <DashboardLayout role="organizer">
         <div className="space-y-8">
+          {/* Email Verification Banner */}
+          <EmailVerificationBanner />
+
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Organizer Dashboard</h1>
             <p className="text-muted-foreground">Welcome back, {user?.name}!</p>
@@ -390,10 +392,13 @@ const Dashboard = () => {
   }
 
   // Attendee Dashboard (existing code)
-
   return (
     <DashboardLayout role="attendee">
       <div className="space-y-8">
+        {/* Email Verification Banner */}
+		
+        <EmailVerificationBanner />
+
         {/* Header */}
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
@@ -423,44 +428,6 @@ const Dashboard = () => {
             </motion.div>
           ))}
         </div>
-
-        {/* Upcoming Events */}
-        {upcomingTickets.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.4 }}
-          >
-            <Card variant="elevated">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-foreground">Upcoming Events</CardTitle>
-                  <Badge variant="outline">{upcomingTickets.length} tickets</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {upcomingTickets.map((ticket) => (
-                    <div
-                      key={ticket.id}
-                      className="flex items-center justify-between p-4 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors"
-                    >
-                      <div className="flex-1">
-                        <p className="font-medium text-foreground">{ticket.eventTitle}</p>
-                        <p className="text-sm text-muted-foreground">{ticket.date}</p>
-                      </div>
-                      <div className="text-right">
-                        <Badge variant={ticket.status === 'valid' ? 'success' : 'secondary'}>
-                          {ticket.ticketType}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
 
         {/* Recent Reviews */}
         {reviews.length > 0 && (
