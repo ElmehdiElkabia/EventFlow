@@ -60,10 +60,11 @@ logs-app:
 logs-frontend:
 	docker-compose logs -f frontend
 
-migrate:
+
+migrate: 
 	docker-compose exec app php artisan migrate
 
-migrate-fresh:
+migrate-fresh: 
 	docker-compose exec app php artisan migrate:fresh
 
 seed:
@@ -75,11 +76,12 @@ migrate-seed: migrate seed
 dev: up
 	@echo "✓ Development environment started"
 	@echo "Waiting for services to be healthy..."
-	@sleep 5
+	@sleep 10
 	@if [ ! -f backend/.env ]; then \
         cp backend/.env.example backend/.env 2>/dev/null || touch backend/.env; \
     fi
 	@docker-compose exec -T app php artisan key:generate || true
+	@docker-compose exec -T app chmod -R 777 storage bootstrap/cache || true
 	@echo "✓ Ready to develop!"
 
 lint:
