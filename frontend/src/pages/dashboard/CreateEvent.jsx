@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, MapPin, DollarSign, Users, Image, ArrowLeft, Loader2 } from "lucide-react";
+import { Calendar, MapPin, DollarSign, Users, Image, ArrowLeft, Loader2, Ticket } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { organizerService } from "@/services/organizerService";
@@ -25,6 +25,11 @@ const CreateEvent = () => {
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
   const [categoryError, setCategoryError] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [ticketTypes, setTicketTypes] = useState([
+    { name: "General Admission", price: "", quantity: "" }
+  ]);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -33,9 +38,7 @@ const CreateEvent = () => {
     location: "",
     address: "",
     capacity: "",
-    price: "",
     categoryId: "",
-    imageUrl: "",
   });
 
   useEffect(() => {
@@ -62,6 +65,47 @@ const CreateEvent = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select a valid image file');
+        return;
+      }
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size must be less than 5MB');
+        return;
+      }
+      setImageFile(file);
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleTicketTypeChange = (index, field, value) => {
+    const updated = [...ticketTypes];
+    updated[index][field] = value;
+    setTicketTypes(updated);
+  };
+
+  const addTicketType = () => {
+    setTicketTypes([...ticketTypes, { name: "", price: "", quantity: "" }]);
+  };
+
+  const removeTicketType = (index) => {
+    if (ticketTypes.length > 1) {
+      setTicketTypes(ticketTypes.filter((_, i) => i !== index));
+    } else {
+      toast.error("At least one ticket type is required");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -71,28 +115,40 @@ const CreateEvent = () => {
       return;
     }
 
+    // Validate ticket types
+    const validTicketTypes = ticketTypes.filter(tt => tt.name && tt.price && tt.quantity);
+    if (validTicketTypes.length === 0) {
+      toast.error("Please add at least one valid ticket type");
+      return;
+    }
+
+    // Calculate total capacity from all ticket types
+    const totalCapacity = validTicketTypes.reduce((sum, tt) => sum + Number(tt.quantity), 0);
+
     setIsSubmitting(true);
 
-    const payload = {
-      title: formData.title,
-      description: formData.description,
-      date: formData.date,
-      end_date: formData.endDate || formData.date,
-      location: formData.location,
-      address: formData.address,
-      capacity: Number(formData.capacity) || 0,
-      image: formData.imageUrl,
-      category_id: Number(formData.categoryId),
-      latitude: null,
-      longitude: null,
-      ticket_types: [
-        {
-          name: "General Admission",
-          price: Number(formData.price || 0),
-          quantity: Number(formData.capacity || 0),
-        },
-      ],
-    };
+    const payload = new FormData();
+    payload.append('title', formData.title);
+    payload.append('description', formData.description);
+    payload.append('date', formData.date);
+    payload.append('end_date', formData.endDate || formData.date);
+    payload.append('location', formData.location);
+    payload.append('address', formData.address);
+    payload.append('capacity', totalCapacity);
+    payload.append('category_id', Number(formData.categoryId));
+    payload.append('latitude', '');
+    payload.append('longitude', '');
+    
+    if (imageFile) {
+      payload.append('image', imageFile);
+    }
+    
+    // Append all ticket types as array items
+    validTicketTypes.forEach((ticketType, index) => {
+      payload.append(`ticket_types[${index}][name]`, ticketType.name);
+      payload.append(`ticket_types[${index}][price]`, Number(ticketType.price));
+      payload.append(`ticket_types[${index}][quantity]`, Number(ticketType.quantity));
+    });
 
     try {
       await organizerService.createEvent(payload);
@@ -100,7 +156,18 @@ const CreateEvent = () => {
       navigate("/dashboard/my-events");
     } catch (err) {
       console.error("Failed to create event:", err);
-      toast.error(err.response?.data?.message || "Failed to create event");
+      console.error("Response data:", err.response?.data);
+      const errorMessage = err.response?.data?.message || "Failed to create event";
+      const errors = err.response?.data?.errors;
+      
+      if (errors) {
+        // Display validation errors
+        Object.keys(errors).forEach(key => {
+          toast.error(`${key}: ${errors[key][0]}`);
+        });
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -257,47 +324,96 @@ const CreateEvent = () => {
             <Card variant="elevated">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-foreground">
-                  <DollarSign className="w-5 h-5 text-primary" />
-                  Tickets & Pricing
+                  <Ticket className="w-5 h-5 text-primary" />
+                  Ticket Types
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="capacity">Capacity *</Label>
-                    <div className="relative">
-                      <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="capacity"
-                        name="capacity"
-                        type="number"
-                        min="1"
-                        placeholder="100"
-                        value={formData.capacity}
-                        onChange={handleChange}
-                        className="pl-10"
-                        required
-                      />
+                {ticketTypes.map((ticketType, index) => (
+                  <div key={index} className="p-4 border rounded-lg space-y-4 bg-secondary/10">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-foreground">Ticket Type {index + 1}</h4>
+                      {ticketTypes.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeTicketType(index)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor={`ticket-name-${index}`}>Ticket Name *</Label>
+                        <Select
+                          value={ticketType.name}
+                          onValueChange={(value) => handleTicketTypeChange(index, 'name', value)}
+                          required
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select ticket type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="General Admission">General Admission</SelectItem>
+                            <SelectItem value="VIP">VIP</SelectItem>
+                            <SelectItem value="Early Bird">Early Bird</SelectItem>
+                            <SelectItem value="Regular">Regular</SelectItem>
+                            <SelectItem value="Premium">Premium</SelectItem>
+                            <SelectItem value="Student">Student</SelectItem>
+                            <SelectItem value="Senior">Senior</SelectItem>
+                            <SelectItem value="Group">Group</SelectItem>
+                            <SelectItem value="Family">Family</SelectItem>
+                            <SelectItem value="Standard">Standard</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`ticket-price-${index}`}>Price ($) *</Label>
+                        <div className="relative">
+                          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            id={`ticket-price-${index}`}
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="0"
+                            value={ticketType.price}
+                            onChange={(e) => handleTicketTypeChange(index, 'price', e.target.value)}
+                            className="pl-10"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`ticket-quantity-${index}`}>Quantity *</Label>
+                        <div className="relative">
+                          <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            id={`ticket-quantity-${index}`}
+                            type="number"
+                            min="1"
+                            placeholder="100"
+                            value={ticketType.quantity}
+                            onChange={(e) => handleTicketTypeChange(index, 'quantity', e.target.value)}
+                            className="pl-10"
+                            required
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="price">Ticket Price ($)</Label>
-                    <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input
-                        id="price"
-                        name="price"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="0 (Free)"
-                        value={formData.price}
-                        onChange={handleChange}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-                </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addTicketType}
+                  className="w-full"
+                >
+                  + Add Another Ticket Type
+                </Button>
               </CardContent>
             </Card>
 
@@ -311,25 +427,25 @@ const CreateEvent = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="imageUrl">Image URL</Label>
+                  <Label htmlFor="imageFile">Upload Image</Label>
                   <Input
-                    id="imageUrl"
-                    name="imageUrl"
-                    type="url"
-                    placeholder="https://example.com/image.jpg"
-                    value={formData.imageUrl}
-                    onChange={handleChange}
+                    id="imageFile"
+                    name="imageFile"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="cursor-pointer"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Supported formats: JPG, PNG, GIF (Max 5MB)
+                  </p>
                 </div>
-                {formData.imageUrl && (
+                {imagePreview && (
                   <div className="relative aspect-video rounded-xl overflow-hidden bg-secondary">
                     <img
-                      src={formData.imageUrl}
+                      src={imagePreview}
                       alt="Event preview"
                       className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.src = "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800";
-                      }}
                     />
                   </div>
                 )}
