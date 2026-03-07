@@ -23,7 +23,7 @@ class StoreEventRequest extends FormRequest
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'capacity' => ['required', 'integer', 'min:1'],
-            'image' => ['nullable', 'url'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
             'category_id' => ['required', 'exists:categories,id'],
             'ticket_types' => ['nullable', 'array'],
             'ticket_types.*.name' => ['required', 'string'],
