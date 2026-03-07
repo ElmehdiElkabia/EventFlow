@@ -56,6 +56,11 @@ class TicketController extends BaseController
             return $this->notFound('Event not found');
         }
 
+        // Check if user is an organizer of this event
+        if ($event->organizers()->where('user_id', auth()->user()->id)->exists()) {
+            return $this->error('Organizers cannot purchase tickets for their own events', 403);
+        }
+
         // Create transaction
         $transaction = Transaction::create([
             'transaction_id' => 'TXN-' . strtoupper(uniqid()),
