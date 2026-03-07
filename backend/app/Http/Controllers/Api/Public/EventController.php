@@ -96,6 +96,7 @@ class EventController extends BaseController
                 'price' => $type->price,
                 'quantity' => $type->quantity,
                 'sold' => $event->tickets()->where('ticket_type_id', $type->id)->count(),
+                'available' => $type->quantity - $event->tickets()->where('ticket_type_id', $type->id)->count(),
             ])->all(),
             'reviews' => $event->reviews->map(fn($review) => [
                 'id' => $review->id,
@@ -126,7 +127,10 @@ class EventController extends BaseController
             'location' => $event->location,
             'price' => $event->ticketTypes->min('price') ?? 0,
             'image' => $event->image_url,
-            'category' => $event->category?->name,
+            'category' => [
+                'id' => $event->category?->id,
+                'name' => $event->category?->name,
+            ],
             'attendees' => $event->tickets->count(),
             'capacity' => $event->capacity,
             'rating' => round($avgRating, 1),
