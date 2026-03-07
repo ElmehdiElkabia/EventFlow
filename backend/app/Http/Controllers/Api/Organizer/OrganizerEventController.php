@@ -80,6 +80,15 @@ class OrganizerEventController extends BaseController
             ] : null,
             'tickets_sold' => $event->tickets->count(),
             'price' => $event->ticketTypes->min('price') ?? 0,
+            'ticket_types' => $event->ticketTypes->map(function($tt) {
+                return [
+                    'id' => $tt->id,
+                    'name' => $tt->name,
+                    'price' => $tt->price,
+                    'quantity' => $tt->quantity,
+                    'available' => $tt->quantity - $tt->tickets()->count(),
+                ];
+            }),
         ]);
     }
 
@@ -91,6 +100,13 @@ class OrganizerEventController extends BaseController
      */
     public function store(StoreEventRequest $request)
     {
+        // Handle image upload
+        $imageUrl = null;
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('events', 'public');
+            $imageUrl = '/storage/' . $imagePath;
+        }
+
         $event = Event::create([
             'title' => $request->title,
             'slug' => \Str::slug($request->title),
@@ -101,7 +117,7 @@ class OrganizerEventController extends BaseController
             'latitude' => $request->latitude,
             'longitude' => $request->longitude,
             'capacity' => $request->capacity,
-            'image_url' => $request->image,
+            'image_url' => $imageUrl,
             'category_id' => $request->category_id,
             'status' => 'pending_approval',
         ]);
@@ -148,7 +164,41 @@ class OrganizerEventController extends BaseController
             return $this->error('Unauthorized', [], 403);
         }
 
-        $event->update($request->validated());
+        $data = $request->validated();
+        
+        // Map date field to start_date
+        if (isset($data['date'])) {
+            $data['start_date'] = $data['date'];
+            unset($data['date']);
+        }
+        
+        // Handle image upload
+        if ($request->hasFile('image')) {
+            $imagePath = $request->file('image')->store('events', 'public');
+            $data['image_url'] = '/storage/' . $imagePath;
+            unset($data['image']);
+        }
+
+        $event->update($data);
+
+        // Update ticket types if provided
+        if ($request->has('ticket_types')) {
+            // Delete existing ticket types (only if no tickets sold)
+            foreach ($event->ticketTypes as $ticketType) {
+                if ($ticketType->tickets()->count() == 0) {
+                    $ticketType->delete();
+                }
+            }
+            
+            // Create new ticket types
+            foreach ($request->ticket_types as $type) {
+                $event->ticketTypes()->create([
+                    'name' => $type['name'],
+                    'price' => $type['price'],
+                    'quantity' => $type['quantity'],
+                ]);
+            }
+        }
 
         return $this->success([
             'id' => $event->id,
