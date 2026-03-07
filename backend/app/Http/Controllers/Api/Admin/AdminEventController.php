@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Api\BaseController;
 use App\Models\Event;
+use App\Notifications\EventApprovedNotification;
+use App\Notifications\EventRejectedNotification;
 
 /**
  * Admin Event Controller
@@ -49,13 +51,18 @@ class AdminEventController extends BaseController
      */
     public function approve($id)
     {
-        $event = Event::find($id);
+        $event = Event::with('organizers')->find($id);
 
         if (!$event) {
             return $this->notFound('Event not found');
         }
 
         $event->update(['status' => 'approved']);
+
+        // Notify all organizers via email and database
+        foreach ($event->organizers as $organizer) {
+            $organizer->notify(new EventApprovedNotification($event));
+        }
 
         return $this->success([
             'id' => $event->id,
@@ -72,13 +79,18 @@ class AdminEventController extends BaseController
      */
     public function reject($id)
     {
-        $event = Event::find($id);
+        $event = Event::with('organizers')->find($id);
 
         if (!$event) {
             return $this->notFound('Event not found');
         }
 
         $event->update(['status' => 'rejected']);
+
+        // Notify all organizers via email and database
+        foreach ($event->organizers as $organizer) {
+            $organizer->notify(new EventRejectedNotification($event));
+        }
 
         return $this->success([
             'id' => $event->id,
