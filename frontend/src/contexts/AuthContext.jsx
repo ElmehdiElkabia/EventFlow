@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { authService } from "@/services/authService";
+import { authStorage } from "@/services/authStorage";
 
 const AuthContext = createContext(null);
 
@@ -8,25 +9,24 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is logged in on mount and fetch fresh data from server
+    // Hydrate from cache first, then ask server using HttpOnly auth cookie.
     const initAuth = async () => {
-      const token = localStorage.getItem('auth_token');
-      if (token) {
-        try {
-          // Fetch fresh user data from server
-          const response = await authService.me();
-          const userData = response.data;
-          setUser(userData);
-          localStorage.setItem('user', JSON.stringify(userData));
-        } catch (error) {
-          // Token invalid or expired, clear auth
-          console.error('Failed to fetch user:', error);
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user');
-          setUser(null);
-        }
+      const cachedUser = authStorage.getUser();
+      if (cachedUser) {
+        setUser(cachedUser);
       }
-      setLoading(false);
+
+      try {
+        const response = await authService.me();
+        const userData = response.data;
+        setUser(userData);
+        authStorage.setUser(userData);
+      } catch {
+        authStorage.clearAuth();
+        setUser(null);
+      } finally {
+        setLoading(false);
+      }
     };
 
     initAuth();
@@ -54,10 +54,10 @@ export const AuthProvider = ({ children }) => {
       const response = await authService.me();
       const updatedUser = response.data;
       setUser(updatedUser);
-      localStorage.setItem('user', JSON.stringify(updatedUser));
+      authStorage.setUser(updatedUser);
       return updatedUser;
-    } catch (error) {
-      console.error('Failed to refresh user:', error);
+    } catch {
+      console.error('Failed to refresh user');
       return null;
     }
   };
