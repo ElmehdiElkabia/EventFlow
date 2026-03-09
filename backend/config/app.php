@@ -119,6 +119,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Client-Side Encryption Key
+    |--------------------------------------------------------------------------
+    |
+    | This key is used to decrypt sensitive data that was encrypted on the
+    | client-side before transmission. Must match the VITE_ENCRYPTION_KEY
+    | in your frontend environment.
+    |
+    */
+
+    'encryption_key' => env('CLIENT_ENCRYPTION_KEY', 'EventFlow2026SecureEncryptionKeyDefault'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Maintenance Mode Driver
     |--------------------------------------------------------------------------
     |
