@@ -21,7 +21,7 @@ const EmailVerificationBanner = () => {
       await authService.resendVerification();
       toast.success("Verification email sent! Please check your inbox.");
     } catch (error) {
-      console.error("Resend error:", error);
+      console.error('Request failed');
       toast.error(error.response?.data?.message || "Failed to resend verification email");
     } finally {
       setResending(false);

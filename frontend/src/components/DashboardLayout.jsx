@@ -75,7 +75,7 @@ const DashboardLayout = ({ children, role }) => {
         const count = notifications.filter((n) => !n.read_at).length;
         setUnreadCount(count);
       } catch (err) {
-        console.error('Failed to fetch notifications:', err);
+        console.error('Request failed');
         setUnreadCount(0);
       }
     };

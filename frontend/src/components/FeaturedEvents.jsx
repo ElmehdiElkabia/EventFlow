@@ -26,7 +26,7 @@ const FeaturedEvents = () => {
         const eventsData = response.data?.data || [];
         setEvents(eventsData.slice(0, 6)); // Limit to 6 for homepage
       } catch (err) {
-        console.error('Error fetching featured events:', err);
+        console.error('Request failed');
         setError(err.response?.data?.message || 'Failed to load events');
         toast.error('Failed to load featured events');
       } finally {

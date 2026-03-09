@@ -114,7 +114,7 @@ const CategoriesSection = () => {
         
         setCategories(mappedCategories.slice(0, 8)); // Limit to 8 for homepage
       } catch (err) {
-        console.error('Error fetching categories:', err);
+        console.error('Request failed');
         setError(err.response?.data?.message || 'Failed to load categories');
         toast.error('Failed to load categories');
       } finally {
