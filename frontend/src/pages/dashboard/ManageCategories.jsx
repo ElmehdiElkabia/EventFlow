@@ -134,7 +134,7 @@ const ManageCategories = () => {
       }));
       setCategories(mappedCategories);
     } catch (err) {
-      console.error("Failed to fetch categories:", err);
+      console.error('Request failed');
       setError(err.response?.data?.message || "Failed to load categories");
       toast.error("Failed to load categories");
     } finally {
@@ -183,7 +183,7 @@ const ManageCategories = () => {
       setEditDialogOpen(false);
       fetchCategories(); // Refresh the list
     } catch (err) {
-      console.error("Failed to save category:", err);
+      console.error('Request failed');
       toast.error(err.response?.data?.message || "Failed to save category");
     } finally {
       setSaving(false);
@@ -199,7 +199,7 @@ const ManageCategories = () => {
       setDeleteDialogOpen(false);
       fetchCategories(); // Refresh the list
     } catch (err) {
-      console.error("Failed to delete category:", err);
+      console.error('Request failed');
       toast.error(err.response?.data?.message || "Failed to delete category");
       setDeleteDialogOpen(false);
     }

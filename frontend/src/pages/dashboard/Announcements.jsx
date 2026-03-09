@@ -66,7 +66,7 @@ const Announcements = () => {
       }));
       setEvents(mappedEvents);
     } catch (err) {
-      console.error("Failed to fetch events:", err);
+      console.error('Request failed');
       setEventsError(err.response?.data?.message || "Failed to load events");
       toast.error("Failed to load events");
     } finally {
@@ -112,7 +112,7 @@ const Announcements = () => {
       setDialogOpen(false);
       toast.success(`Announcement sent to ${selectedEvent?.attendees || 0} attendees`);
     } catch (err) {
-      console.error("Failed to send announcement:", err);
+      console.error('Request failed');
       toast.error(err.response?.data?.message || "Failed to send announcement");
     } finally {
       setSending(false);

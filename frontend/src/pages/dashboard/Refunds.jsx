@@ -56,7 +56,7 @@ const Refunds = () => {
       const response = await adminService.getRefunds();
       setRefunds(response || []);
     } catch (err) {
-      console.error('Failed to fetch refunds:', err);
+      console.error('Request failed');
       setError(err.response?.data?.message || 'Failed to load refunds');
       toast.error(err.response?.data?.message || 'Failed to load refunds');
     } finally {
@@ -74,7 +74,7 @@ const Refunds = () => {
         totalAmount: `$${response.totalAmount || '0.00'}`
       });
     } catch (err) {
-      console.error('Failed to fetch refund stats:', err);
+      console.error('Request failed');
     }
   };
   const filteredRefunds = refunds.filter(
@@ -95,7 +95,7 @@ const Refunds = () => {
       setDialogOpen(false);
       setAdminNotes("");
     } catch (err) {
-      console.error("Failed to approve refund:", err);
+      console.error('Request failed');
       toast.error(err.response?.data?.message || "Failed to approve refund");
     } finally {
       setActionLoading(false);
@@ -118,7 +118,7 @@ const Refunds = () => {
       setDialogOpen(false);
       setRejectionReason("");
     } catch (err) {
-      console.error("Failed to reject refund:", err);
+      console.error('Request failed');
       toast.error(err.response?.data?.message || "Failed to reject refund");
     } finally {
       setActionLoading(false);

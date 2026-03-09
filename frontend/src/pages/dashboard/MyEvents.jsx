@@ -58,7 +58,7 @@ const MyEvents = () => {
       const response = await organizerService.getMyEvents();
       setEvents(response.data || []);
     } catch (err) {
-      console.error("Failed to fetch events:", err);
+      console.error('Request failed');
       setError(err.response?.data?.message || "Failed to load events");
       toast.error("Failed to load events");
     } finally {
@@ -82,7 +82,7 @@ const MyEvents = () => {
       setEvents(events.filter((e) => e.id !== eventToDelete));
       toast.success("Event deleted successfully");
     } catch (err) {
-      console.error("Failed to delete event:", err);
+      console.error('Request failed');
       toast.error(err.response?.data?.message || "Failed to delete event");
     } finally {
       setDeleteDialogOpen(false);

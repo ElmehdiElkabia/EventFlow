@@ -100,7 +100,7 @@ const EditEvent = () => {
         setImagePreview(event.image_url);
       }
     } catch (err) {
-      console.error("Failed to fetch event:", err);
+      console.error('Request failed');
       setError(err.response?.data?.message || "Failed to load event");
       toast.error(err.response?.data?.message || "Failed to load event");
     } finally {
@@ -114,7 +114,7 @@ const EditEvent = () => {
       const list = response?.data || response || [];
       setCategories(Array.isArray(list) ? list : []);
     } catch (err) {
-      console.error("Failed to load categories:", err);
+      console.error('Request failed');
       toast.error(err.response?.data?.message || "Failed to load categories");
     } finally {
       setLoadingCategories(false);
@@ -198,8 +198,8 @@ const EditEvent = () => {
       toast.success("Event updated successfully!");
       navigate("/dashboard/my-events");
     } catch (err) {
-      console.error("Failed to update event:", err);
-      console.error("Response data:", err.response?.data);
+      console.error('Request failed');
+      console.error('Request failed');
       const errorMessage = err.response?.data?.message || "Failed to update event";
       const errors = err.response?.data?.errors;
       

@@ -85,7 +85,7 @@ const AdminUsers = () => {
       }));
       setUsers(mappedUsers);
     } catch (err) {
-      console.error("Failed to fetch users:", err);
+      console.error('Request failed');
       setError(err.response?.data?.message || "Failed to load users");
       toast.error("Failed to load users");
     } finally {
@@ -118,7 +118,7 @@ const AdminUsers = () => {
       setUsers(users.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
       toast.success("User role updated successfully!");
     } catch (err) {
-      console.error("Failed to update user role:", err);
+      console.error('Request failed');
       toast.error(err.response?.data?.message || "Failed to update user role");
     } finally {
       setActionLoading(false);
@@ -144,7 +144,7 @@ const AdminUsers = () => {
       setSuspendModal({ open: false, user: null });
       setSuspensionReason("");
     } catch (err) {
-      console.error("Failed to suspend user:", err);
+      console.error('Request failed');
       toast.error(err.response?.data?.message || "Failed to suspend user");
     } finally {
       setActionLoading(false);
@@ -169,7 +169,7 @@ const AdminUsers = () => {
       toast.success(`User ${activateModal.user.name} has been activated`);
       setActivateModal({ open: false, user: null });
     } catch (err) {
-      console.error("Failed to activate user:", err);
+      console.error('Request failed');
       toast.error(err.response?.data?.message || "Failed to activate user");
     } finally {
       setActionLoading(false);
@@ -203,7 +203,7 @@ const AdminUsers = () => {
       setEmailModal({ open: false, user: null });
       setEmailData({ subject: "", message: "" });
     } catch (err) {
-      console.error("Failed to send email:", err);
+      console.error('Request failed');
       toast.error(err.response?.data?.message || "Failed to send email");
     } finally {
       setActionLoading(false);

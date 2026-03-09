@@ -59,7 +59,7 @@ const Attendees = () => {
         setEvent({ title: attendeesRes[0].event });
       }
     } catch (err) {
-      console.error("Failed to load attendees:", err);
+      console.error('Request failed');
       setError(err.response?.data?.message || "Failed to load attendees");
       toast.error(err.response?.data?.message || "Failed to load attendees");
     } finally {

@@ -57,7 +57,7 @@ const Profile = () => {
       setTickets(ticketsRes || []);
       setReviews(reviewsRes || []);
     } catch (err) {
-      console.error('Failed to fetch profile:', err);
+      console.error('Request failed');
       const errorMsg = err.response?.data?.message || 'Failed to load profile';
       setError(errorMsg);
       toast.error(errorMsg);
@@ -83,7 +83,7 @@ const Profile = () => {
       setIsEditing(false);
       toast.success("Profile updated successfully");
     } catch (err) {
-      console.error('Failed to update profile:', err);
+      console.error('Request failed');
       toast.error(err.response?.data?.message || 'Failed to update profile');
     } finally {
       setSaving(false);

@@ -69,7 +69,7 @@ const AdminEvents = () => {
         }))
       );
     } catch (err) {
-      console.error("Error fetching events:", err);
+      console.error('Request failed');
       setError(err.response?.data?.message || "Failed to load events");
       toast.error("Failed to load events");
     } finally {
@@ -128,7 +128,7 @@ const AdminEvents = () => {
       setActionDialog({ open: false, type: null, eventId: null });
       setRejectionReason("");
     } catch (err) {
-      console.error("Error performing action:", err);
+      console.error('Request failed');
       toast.error(err.response?.data?.message || "Failed to perform action. Please try again.");
     } finally {
       setActionLoading(false);

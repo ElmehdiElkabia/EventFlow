@@ -36,7 +36,7 @@ const UpcomingEvents = () => {
       const validTickets = (response?.data || []).filter(t => t.status === 'valid');
       setTickets(validTickets);
     } catch (err) {
-      console.error('Failed to fetch upcoming events:', err);
+      console.error('Request failed');
       const errorMsg = err.response?.data?.message || 'Failed to load upcoming events';
       setError(errorMsg);
       toast.error(errorMsg);

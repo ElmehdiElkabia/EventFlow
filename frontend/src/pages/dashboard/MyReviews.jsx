@@ -61,7 +61,7 @@ const MyReviews = () => {
       }, []);
       setAttendedEvents(uniqueEvents);
     } catch (err) {
-      console.error("Failed to fetch attended events:", err);
+      console.error('Request failed');
     }
   };
 
@@ -72,7 +72,7 @@ const MyReviews = () => {
       const response = await userService.getReviews();
       setReviews(response?.data || []);
     } catch (err) {
-      console.error("Failed to fetch reviews:", err);
+      console.error('Request failed');
       const errorMsg = err.response?.data?.message || "Failed to load reviews";
       setError(errorMsg);
       toast.error(errorMsg);
@@ -102,7 +102,7 @@ const MyReviews = () => {
       setFormData({ event_id: "", rating: 5, comment: "" });
       fetchReviews();
     } catch (err) {
-      console.error("Failed to submit review:", err);
+      console.error('Request failed');
       const errorMsg = err.response?.data?.message || "Failed to submit review";
       toast.error(errorMsg);
     } finally {

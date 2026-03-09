@@ -48,7 +48,7 @@ const Transactions = () => {
         setTransactions(transactionsData || []);
         setStats(statsData || {});
       } catch (err) {
-        console.error('Failed to fetch transactions:', err);
+        console.error('Request failed');
         toast.error(err.response?.data?.message || 'Failed to load transactions');
       } finally {
         setLoading(false);

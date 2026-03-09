@@ -73,7 +73,7 @@ const Settings = () => {
       const response = await authService.me();
       setProfile(response.data || {});
     } catch (err) {
-      console.error('Failed to fetch profile:', err);
+      console.error('Request failed');
       const errorMsg = err.response?.data?.message || 'Failed to load profile';
       toast.error(errorMsg);
     } finally {
@@ -92,7 +92,7 @@ const Settings = () => {
       }
       toast.success("Profile updated successfully");
     } catch (err) {
-      console.error('Failed to update profile:', err);
+      console.error('Request failed');
       toast.error(err.response?.data?.message || 'Failed to update profile');
     } finally {
       setSaving(false);
@@ -106,7 +106,7 @@ const Settings = () => {
       localStorage.setItem('notification_settings', JSON.stringify(notifications));
       toast.success("Notification preferences saved");
     } catch (err) {
-      console.error('Failed to save settings:', err);
+      console.error('Request failed');
       toast.error(err.response?.data?.message || 'Failed to save settings');
     } finally {
       setSaving(false);
@@ -137,7 +137,7 @@ const Settings = () => {
         new_password_confirmation: '',
       });
     } catch (err) {
-      console.error('Failed to update password:', err);
+      console.error('Request failed');
       toast.error(err.response?.data?.message || 'Failed to update password');
     } finally {
       setSaving(false);
@@ -161,7 +161,7 @@ const Settings = () => {
         setBillingAddress(addressRes.data);
       }
     } catch (err) {
-      console.error('Failed to fetch billing data:', err);
+      console.error('Request failed');
     } finally {
       setLoadingBilling(false);
     }
@@ -195,7 +195,7 @@ const Settings = () => {
       await billingService.updateBillingAddress(billingAddress);
       toast.success('Billing address updated successfully');
     } catch (err) {
-      console.error('Failed to update billing address:', err);
+      console.error('Request failed');
       toast.error(err.response?.data?.message || 'Failed to update billing address');
     } finally {
       setSaving(false);
@@ -236,7 +236,7 @@ const Settings = () => {
       // Refresh payment methods
       fetchBillingData();
     } catch (err) {
-      console.error('Failed to add payment method:', err);
+      console.error('Request failed');
       toast.error(err.response?.data?.message || 'Failed to add payment method');
     } finally {
       setSaving(false);

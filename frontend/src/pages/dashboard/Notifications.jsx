@@ -32,7 +32,7 @@ const Notifications = () => {
       const response = await userService.getNotifications();
       setNotifications(response?.data || []);
     } catch (err) {
-      console.error('Failed to fetch notifications:', err);
+      console.error('Request failed');
       const errorMsg = err.response?.data?.message || 'Failed to load notifications';
       setError(errorMsg);
       toast.error(errorMsg);
@@ -48,7 +48,7 @@ const Notifications = () => {
         prev.map(n => n.id === id ? { ...n, read_at: new Date().toISOString() } : n)
       );
     } catch (err) {
-      console.error('Failed to mark notification as read:', err);
+      console.error('Request failed');
     }
   };
 
@@ -61,7 +61,7 @@ const Notifications = () => {
       );
       toast.success('All notifications marked as read');
     } catch (err) {
-      console.error('Failed to mark all as read:', err);
+      console.error('Request failed');
       toast.error('Failed to mark all as read');
     } finally {
       setMarkingAllAsRead(false);

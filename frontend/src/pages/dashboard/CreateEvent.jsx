@@ -49,7 +49,7 @@ const CreateEvent = () => {
         const response = await categoryService.getCategories();
         setCategories(response.data || []);
       } catch (err) {
-        console.error("Failed to load categories:", err);
+        console.error('Request failed');
         setCategoryError(err.response?.data?.message || "Failed to load categories");
         toast.error("Failed to load categories");
       } finally {
@@ -155,8 +155,8 @@ const CreateEvent = () => {
       toast.success("Event created successfully. Awaiting admin approval.");
       navigate("/dashboard/my-events");
     } catch (err) {
-      console.error("Failed to create event:", err);
-      console.error("Response data:", err.response?.data);
+      console.error('Request failed');
+      console.error('Request failed');
       const errorMessage = err.response?.data?.message || "Failed to create event";
       const errors = err.response?.data?.errors;
       

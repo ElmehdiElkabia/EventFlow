@@ -130,7 +130,7 @@ const Analytics = () => {
 			setCategoryData(categoryWithColors);
 			setTopEvents(response.topEvents || []);
 		} catch (err) {
-			console.error("Failed to fetch analytics:", err);
+			console.error('Request failed');
 			setError(err.response?.data?.message || "Failed to load analytics");
 			toast.error(err.response?.data?.message || "Failed to load analytics");
 		} finally {

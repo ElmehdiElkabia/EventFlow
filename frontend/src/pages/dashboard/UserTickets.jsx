@@ -29,7 +29,7 @@ const UserTickets = () => {
       const response = await ticketService.getMyTickets();
       setTickets(response || []);
     } catch (err) {
-      console.error("Failed to fetch tickets:", err);
+      console.error('Request failed');
       const errorMsg = err.response?.data?.message || "Failed to load tickets";
       setError(errorMsg);
       toast.error(errorMsg);

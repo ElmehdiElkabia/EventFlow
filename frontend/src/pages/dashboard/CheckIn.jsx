@@ -47,7 +47,7 @@ const CheckIn = () => {
       }
       setError(null);
     } catch (err) {
-      console.error(err);
+      console.error('Unexpected error');
       const errorMsg = err.response?.data?.message || "Failed to load attendees";
       setError(errorMsg);
       toast.error(errorMsg);
@@ -113,7 +113,7 @@ const CheckIn = () => {
         // Stop the stream immediately as Html5QrcodeScanner will request it again
         stream.getTracks().forEach(track => track.stop());
       } catch (permError) {
-        console.error("Camera permission error:", permError);
+        console.error('Request failed');
         let errorMsg = "Camera access denied. ";
         
         if (permError.name === "NotAllowedError") {
@@ -165,7 +165,7 @@ const CheckIn = () => {
       toast.success("Camera started successfully!");
       
     } catch (err) {
-      console.error("Failed to start scanner:", err);
+      console.error('Request failed');
       const errorMsg = err.message || "Failed to start camera. Please refresh and try again.";
       setScannerError(errorMsg);
       setScanning(false);
@@ -193,7 +193,7 @@ const CheckIn = () => {
       }
 
       if (!attendee) {
-        console.error("No attendee found for code:", code);
+        console.error('Request failed');
         toast.error("Ticket or attendee not found. Please check the code.");
         return;
       }
@@ -211,7 +211,7 @@ const CheckIn = () => {
       });
       await loadData();
     } catch (err) {
-      console.error(err);
+      console.error('Unexpected error');
       const errorMsg = err.response?.data?.message || "Check-in failed.";
       toast.error(errorMsg);
     }
