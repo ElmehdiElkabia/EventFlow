@@ -7,27 +7,53 @@ use Illuminate\Http\Request;
 
 class Cors
 {
+    private function resolveAllowedOrigin(Request $request): ?string
+    {
+        $origin = $request->headers->get('Origin');
+        if (!$origin) {
+            return null;
+        }
+
+        $allowedOrigins = array_filter(array_map('trim', explode(',', (string) env(
+            'CORS_ALLOWED_ORIGINS',
+            'http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000'
+        ))));
+
+        return in_array($origin, $allowedOrigins, true) ? $origin : null;
+    }
+
+    private function applyCorsHeaders($response, ?string $allowedOrigin)
+    {
+        if ($allowedOrigin) {
+            $response->headers->set('Access-Control-Allow-Origin', $allowedOrigin);
+            $response->headers->set('Access-Control-Allow-Credentials', 'true');
+            $response->headers->set('Vary', 'Origin');
+        }
+
+        $response->headers->set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+        $response->headers->set('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+        $response->headers->set('Access-Control-Expose-Headers', 'Authorization');
+
+        return $response;
+    }
+
     /**
      * Handle an incoming request.
      */
     public function handle(Request $request, Closure $next)
     {
+        $allowedOrigin = $this->resolveAllowedOrigin($request);
+
         // Handle preflight requests
         if ($request->isMethod('OPTIONS')) {
-            return response('', 200)
-                ->header('Access-Control-Allow-Origin', '*')
-                ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
-                ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin')
+            $response = response('', 200)
                 ->header('Access-Control-Max-Age', '86400');
+
+            return $this->applyCorsHeaders($response, $allowedOrigin);
         }
 
         $response = $next($request);
 
-        // Add CORS headers to response
-        return $response
-            ->header('Access-Control-Allow-Origin', '*')
-            ->header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
-            ->header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin')
-            ->header('Access-Control-Expose-Headers', 'Authorization');
+        return $this->applyCorsHeaders($response, $allowedOrigin);
     }
 }
