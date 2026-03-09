@@ -40,7 +40,7 @@ const Events = () => {
           }
         }
       } catch (err) {
-        console.error('Error fetching categories:', err);
+        console.error('Request failed');
       } finally {
         setCategoriesLoading(false);
       }
@@ -65,7 +65,7 @@ const Events = () => {
         setEvents(eventsData);
         setTotalPages(pagination.last_page || 1);
       } catch (err) {
-        console.error('Error fetching events:', err);
+        console.error('Request failed');
         toast.error('Failed to load events');
       } finally {
         setLoading(false);

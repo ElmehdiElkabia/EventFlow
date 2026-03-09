@@ -36,7 +36,7 @@ const Login = () => {
       const from = location.state?.from?.pathname || "/dashboard";
       navigate(from, { replace: true });
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Login failed');
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.errors?.email?.[0] ||
                           "Invalid email or password";

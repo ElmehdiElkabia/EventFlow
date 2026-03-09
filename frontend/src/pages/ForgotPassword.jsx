@@ -23,7 +23,7 @@ const ForgotPassword = () => {
       setSent(true);
       toast.success("Password reset link sent to your email!");
     } catch (error) {
-      console.error("Forgot password error:", error);
+      console.error("Forgot password request failed");
       const errorMessage = error.response?.data?.message || "Failed to send reset link. Please try again.";
       toast.error(errorMessage);
     } finally {

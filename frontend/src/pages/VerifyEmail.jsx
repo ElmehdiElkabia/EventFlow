@@ -32,7 +32,7 @@ const VerifyEmail = () => {
       // Refresh user data to update email_verified_at
       await refreshUser();
     } catch (error) {
-      console.error("Verification error:", error);
+      console.error('Request failed');
       setStatus("error");
       setMessage(error.response?.data?.message || "Verification failed. The link may be invalid or expired.");
       toast.error("Verification failed");
@@ -45,7 +45,7 @@ const VerifyEmail = () => {
       await authService.resendVerification();
       toast.success("Verification email sent! Please check your inbox.");
     } catch (error) {
-      console.error("Resend error:", error);
+      console.error('Request failed');
       toast.error(error.response?.data?.message || "Failed to resend verification email");
     } finally {
       setResending(false);

@@ -58,7 +58,7 @@ const Dashboard = () => {
       setReviews(reviewsRes.data || []);
       setNotifications(notificationsRes.data || []);
     } catch (err) {
-      console.error('Failed to fetch dashboard data:', err);
+      console.error('Request failed');
       setError(err.response?.data?.message || 'Failed to load dashboard data');
       toast.error('Failed to load dashboard data');
     } finally {
@@ -87,7 +87,7 @@ const Dashboard = () => {
       
 
     } catch (err) {
-      console.error('Failed to fetch admin dashboard:', err);
+      console.error('Request failed');
       setError(err.response?.data?.message || 'Failed to load dashboard data');
       toast.error('Failed to load dashboard data');
     } finally {
@@ -102,7 +102,7 @@ const Dashboard = () => {
       // For now, just show basic info
       setLoading(false);
     } catch (err) {
-      console.error('Failed to fetch organizer dashboard:', err);
+      console.error('Request failed');
       setError(err.response?.data?.message || 'Failed to load dashboard data');
       toast.error('Failed to load dashboard data');
       setLoading(false);

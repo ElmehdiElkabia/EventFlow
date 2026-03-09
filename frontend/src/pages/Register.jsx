@@ -39,7 +39,7 @@ const Register = () => {
       });
       navigate("/dashboard");
     } catch (error) {
-      console.error("Registration error:", error);
+      console.error("Registration failed");
       const errorMessage = error.response?.data?.message || 
                           error.response?.data?.errors?.email?.[0] || 
                           "Registration failed. Please try again.";

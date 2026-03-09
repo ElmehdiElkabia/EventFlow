@@ -51,7 +51,7 @@ const EventDetail = () => {
           setSelectedTicketType(response.data.ticketTypes[0]);
         }
       } catch (err) {
-        console.error('Error fetching event:', err);
+        console.error('Request failed');
         setError(err.response?.data?.message || 'Failed to load event');
         toast.error('Event not found');
         
@@ -152,7 +152,7 @@ const EventDetail = () => {
       }, 1500);
       
     } catch (err) {
-      console.error('Failed to purchase tickets:', err);
+      console.error('Request failed');
       const errorMsg = err.response?.data?.message || 'Failed to purchase tickets';
       
       // Show specific message for organizers

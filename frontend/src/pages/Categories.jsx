@@ -221,7 +221,7 @@ const Categories = () => {
         const response = await categoryService.getCategories();
         setCategories(response.data || []);
       } catch (err) {
-        console.error('Error fetching categories:', err);
+        console.error('Request failed');
         setError(err.response?.data?.message || 'Failed to load categories');
         toast.error('Failed to load categories');
       } finally {
