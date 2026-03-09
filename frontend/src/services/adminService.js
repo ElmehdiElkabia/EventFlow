@@ -1,4 +1,5 @@
 import api from "./api";
+import { secureId, securePayload } from './serviceSecurity';
 
 const adminService = {
   /**
@@ -10,7 +11,7 @@ const adminService = {
       const response = await api.get(`/admin/events`);
       return response?.data || [];
     } catch (error) {
-      console.error("Failed to fetch events:", error);
+      console.error('Request failed');
       throw error;
     }
   },
@@ -22,10 +23,10 @@ const adminService = {
    */
   approveEvent: async (id) => {
     try {
-      const response = await api.patch(`/admin/events/${id}/approve`, {});
+      const response = await api.patch(`/admin/events/${secureId(id, 'eventId')}/approve`, {});
       return response?.data || {};
     } catch (error) {
-      console.error("Failed to approve event:", error);
+      console.error('Request failed');
       throw error;
     }
   },
@@ -38,10 +39,13 @@ const adminService = {
    */
   rejectEvent: async (id, reason = "") => {
     try {
-      const response = await api.patch(`/admin/events/${id}/reject`, { reason });
+      const response = await api.patch(
+        `/admin/events/${secureId(id, 'eventId')}/reject`,
+        securePayload({ reason })
+      );
       return response?.data || {};
     } catch (error) {
-      console.error("Failed to reject event:", error);
+      console.error('Request failed');
       throw error;
     }
   },
@@ -55,7 +59,7 @@ const adminService = {
       const response = await api.get('/admin/categories');
       return response?.data || [];
     } catch (error) {
-      console.error("Failed to fetch categories:", error);
+      console.error('Request failed');
       throw error;
     }
   },
@@ -67,10 +71,10 @@ const adminService = {
    */
   createCategory: async (data) => {
     try {
-      const response = await api.post('/admin/categories', data);
+      const response = await api.post('/admin/categories', securePayload(data));
       return response?.data || {};
     } catch (error) {
-      console.error("Failed to create category:", error);
+      console.error('Request failed');
       throw error;
     }
   },
@@ -83,10 +87,13 @@ const adminService = {
    */
   updateCategory: async (id, data) => {
     try {
-      const response = await api.patch(`/admin/categories/${id}`, data);
+      const response = await api.patch(
+        `/admin/categories/${secureId(id, 'categoryId')}`,
+        securePayload(data)
+      );
       return response?.data || {};
     } catch (error) {
-      console.error("Failed to update category:", error);
+      console.error('Request failed');
       throw error;
     }
   },
@@ -98,10 +105,10 @@ const adminService = {
    */
   deleteCategory: async (id) => {
     try {
-      const response = await api.delete(`/admin/categories/${id}`);
+      const response = await api.delete(`/admin/categories/${secureId(id, 'categoryId')}`);
       return response?.data || {};
     } catch (error) {
-      console.error("Failed to delete category:", error);
+      console.error('Request failed');
       throw error;
     }
   },
@@ -115,7 +122,7 @@ const adminService = {
       const response = await api.get('/admin/users');
       return response?.data || [];
     } catch (error) {
-      console.error("Failed to fetch users:", error);
+      console.error('Request failed');
       throw error;
     }
   },
@@ -128,10 +135,13 @@ const adminService = {
    */
   updateUserRole: async (id, role) => {
     try {
-      const response = await api.patch(`/admin/users/${id}/role`, { role });
+      const response = await api.patch(
+        `/admin/users/${secureId(id, 'userId')}/role`,
+        securePayload({ role })
+      );
       return response?.data || {};
     } catch (error) {
-      console.error("Failed to update user role:", error);
+      console.error('Request failed');
       throw error;
     }
   },
@@ -144,10 +154,13 @@ const adminService = {
    */
   suspendUser: async (id, reason = null) => {
     try {
-      const response = await api.patch(`/admin/users/${id}/suspend`, { reason });
+      const response = await api.patch(
+        `/admin/users/${secureId(id, 'userId')}/suspend`,
+        securePayload({ reason })
+      );
       return response?.data || {};
     } catch (error) {
-      console.error("Failed to suspend user:", error);
+      console.error('Request failed');
       throw error;
     }
   },
@@ -159,10 +172,10 @@ const adminService = {
    */
   activateUser: async (id) => {
     try {
-      const response = await api.patch(`/admin/users/${id}/activate`);
+      const response = await api.patch(`/admin/users/${secureId(id, 'userId')}/activate`);
       return response?.data || {};
     } catch (error) {
-      console.error("Failed to activate user:", error);
+      console.error('Request failed');
       throw error;
     }
   },
@@ -175,10 +188,13 @@ const adminService = {
    */
   sendEmailToUser: async (id, emailData) => {
     try {
-      const response = await api.post(`/admin/users/${id}/send-email`, emailData);
+      const response = await api.post(
+        `/admin/users/${secureId(id, 'userId')}/send-email`,
+        securePayload(emailData)
+      );
       return response?.data || {};
     } catch (error) {
-      console.error("Failed to send email:", error);
+      console.error('Request failed');
       throw error;
     }
   },
@@ -192,7 +208,7 @@ const adminService = {
       const response = await api.get('/admin/transactions');
       return response?.data || [];
     } catch (error) {
-      console.error("Failed to fetch transactions:", error);
+      console.error('Request failed');
       throw error;
     }
   },
@@ -206,7 +222,7 @@ const adminService = {
       const response = await api.get('/admin/transactions/stats');
       return response?.data || {};
     } catch (error) {
-      console.error("Failed to fetch transaction stats:", error);
+      console.error('Request failed');
       throw error;
     }
   },
@@ -220,7 +236,7 @@ const adminService = {
       const response = await api.get('/admin/refunds');
       return response?.data || [];
     } catch (error) {
-      console.error("Failed to fetch refunds:", error);
+      console.error('Request failed');
       throw error;
     }
   },
@@ -234,7 +250,7 @@ const adminService = {
       const response = await api.get('/admin/refunds/stats');
       return response?.data || {};
     } catch (error) {
-      console.error("Failed to fetch refund stats:", error);
+      console.error('Request failed');
       throw error;
     }
   },
@@ -247,10 +263,13 @@ const adminService = {
    */
   approveRefund: async (id, adminNotes = null) => {
     try {
-      const response = await api.patch(`/admin/refunds/${id}/approve`, { admin_notes: adminNotes });
+      const response = await api.patch(
+        `/admin/refunds/${secureId(id, 'refundId')}/approve`,
+        securePayload({ admin_notes: adminNotes })
+      );
       return response?.data || {};
     } catch (error) {
-      console.error("Failed to approve refund:", error);
+      console.error('Request failed');
       throw error;
     }
   },
@@ -263,10 +282,13 @@ const adminService = {
    */
   rejectRefund: async (id, adminNotes) => {
     try {
-      const response = await api.patch(`/admin/refunds/${id}/reject`, { admin_notes: adminNotes });
+      const response = await api.patch(
+        `/admin/refunds/${secureId(id, 'refundId')}/reject`,
+        securePayload({ admin_notes: adminNotes })
+      );
       return response?.data || {};
     } catch (error) {
-      console.error("Failed to reject refund:", error);
+      console.error('Request failed');
       throw error;
     }
   },
@@ -280,7 +302,7 @@ const adminService = {
       const response = await api.get('/admin/analytics');
       return response?.data || {};
     } catch (error) {
-      console.error("Failed to fetch analytics:", error);
+      console.error('Request failed');
       throw error;
     }
   },

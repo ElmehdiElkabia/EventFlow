@@ -1,4 +1,5 @@
 import api from './api';
+import { secureId, securePayload } from './serviceSecurity';
 
 /**
  * Organizer Service
@@ -13,27 +14,27 @@ export const organizerService = {
   /**
    * Get a single event by ID.
    */
-  getEvent: (id) => api.get(`/organizer/events/${id}`),
+  getEvent: (id) => api.get(`/organizer/events/${secureId(id, 'eventId')}`),
 
   /**
    * Create a new event.
    */
-  createEvent: (data) => api.post('/organizer/events', data),
+  createEvent: (data) => api.post('/organizer/events', securePayload(data)),
 
   /**
    * Update an existing event.
    */
-  updateEvent: (id, data) => api.patch(`/organizer/events/${id}`, data),
+  updateEvent: (id, data) => api.patch(`/organizer/events/${secureId(id, 'eventId')}`, securePayload(data)),
 
   /**
    * Delete an event.
    */
-  deleteEvent: (id) => api.delete(`/organizer/events/${id}`),
+  deleteEvent: (id) => api.delete(`/organizer/events/${secureId(id, 'eventId')}`),
 
   /**
    * Send announcement to event attendees.
    */
-  sendAnnouncement: (data) => api.post('/organizer/announcements', data),
+  sendAnnouncement: (data) => api.post('/organizer/announcements', securePayload(data)),
 
   /**
    * Get sales overview for organizer.

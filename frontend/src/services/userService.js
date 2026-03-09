@@ -1,4 +1,5 @@
 import api from './api';
+import { secureId, securePayload } from './serviceSecurity';
 
 /**
  * User Service
@@ -20,7 +21,7 @@ export const ticketService = {
    * @returns {Promise} API response
    */
   getTicket: (id) => {
-    return api.get(`/user/tickets/${id}`);
+    return api.get(`/user/tickets/${secureId(id, 'ticketId')}`);
   },
 
   /**
@@ -29,7 +30,7 @@ export const ticketService = {
    * @returns {Promise} API response
    */
   buyTicket: (data) => {
-    return api.post('/user/tickets/buy', data);
+    return api.post('/user/tickets/buy', securePayload(data));
   },
 };
 
@@ -48,7 +49,7 @@ export const userService = {
    * @returns {Promise} API response
    */
   updateProfile: (data) => {
-    return api.patch('/user/profile', data);
+    return api.patch('/user/profile', securePayload(data));
   },
 
   /**
@@ -65,7 +66,7 @@ export const userService = {
    * @returns {Promise} API response
    */
   createReview: (data) => {
-    return api.post('/user/reviews', data);
+    return api.post('/user/reviews', securePayload(data));
   },
 
   /**
@@ -82,7 +83,7 @@ export const userService = {
    * @returns {Promise} API response
    */
   markNotificationAsRead: (id) => {
-    return api.post(`/user/notifications/${id}/read`);
+    return api.post(`/user/notifications/${secureId(id, 'notificationId')}/read`);
   },
 
   /**
@@ -99,6 +100,6 @@ export const userService = {
    * @returns {Promise} API response
    */
   updateSettings: (data) => {
-    return api.patch('/user/settings', data);
+    return api.patch('/user/settings', securePayload(data));
   },
 };

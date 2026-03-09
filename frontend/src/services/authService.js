@@ -1,4 +1,7 @@
 import api from './api';
+import { authStorage } from './authStorage';
+import { secureId, securePayload } from './serviceSecurity';
+import { encryptAuthCredentials } from './encryption';
 
 /**
  * Authentication Service
@@ -10,34 +13,32 @@ export const authService = {
    * Login user
    * @param {string} email - User email
    * @param {string} password - User password
-   * @returns {Promise} API response with token and user data
+   * @returns {Promise} API response with user data
    */
   login: async (email, password) => {
-    const response = await api.post('/auth/login', { email, password });
-    
-    // Store token and user in localStorage (response already unwrapped by interceptor)
-    if (response.data?.token) {
-      localStorage.setItem('auth_token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+    const encrypted = await encryptAuthCredentials({ email, password });
+    const response = await api.post('/auth/login', securePayload(encrypted));
+
+    if (response.data?.user) {
+      authStorage.setUser(response.data.user);
     }
-    
+
     return response;
   },
 
   /**
    * Register new user
    * @param {Object} userData - User registration data
-   * @returns {Promise} API response with token and user data
+   * @returns {Promise} API response with user data
    */
   register: async (userData) => {
-    const response = await api.post('/auth/register', userData);
-    
-    // Store token and user in localStorage (response already unwrapped by interceptor)
-    if (response.data?.token) {
-      localStorage.setItem('auth_token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+    const encrypted = await encryptAuthCredentials(userData);
+    const response = await api.post('/auth/register', securePayload(encrypted));
+
+    if (response.data?.user) {
+      authStorage.setUser(response.data.user);
     }
-    
+
     return response;
   },
 
@@ -48,12 +49,10 @@ export const authService = {
   logout: async () => {
     try {
       await api.post('/auth/logout');
-    } catch (error) {
-      console.error('Logout error:', error);
+    } catch {
+      console.error('Logout request failed');
     } finally {
-      // Always clear local storage
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user');
+      authStorage.clearAuth();
     }
   },
 
@@ -67,10 +66,10 @@ export const authService = {
 
   /**
    * Check if user is authenticated
-   * @returns {boolean} True if user has token
+   * @returns {boolean} True if user cache exists
    */
   isAuthenticated: () => {
-    return !!localStorage.getItem('auth_token');
+    return !!authStorage.getUser();
   },
 
   /**
@@ -78,8 +77,7 @@ export const authService = {
    * @returns {Object|null} User object or null
    */
   getCurrentUser: () => {
-    const userStr = localStorage.getItem('user');
-    return userStr ? JSON.parse(userStr) : null;
+    return authStorage.getUser();
   },
 
   /**
@@ -96,7 +94,7 @@ export const authService = {
    * @returns {Promise} API response
    */
   forgotPassword: async (email) => {
-    return await api.post('/auth/forgot-password', { email });
+    return await api.post('/auth/forgot-password', securePayload({ email }));
   },
 
   /**
@@ -105,7 +103,8 @@ export const authService = {
    * @returns {Promise} API response
    */
   resetPassword: async (data) => {
-    return await api.post('/auth/reset-password', data);
+    const encrypted = await encryptAuthCredentials(data);
+    return await api.post('/auth/reset-password', securePayload(encrypted));
   },
 
   /**
@@ -115,7 +114,7 @@ export const authService = {
    * @returns {Promise} API response
    */
   verifyEmail: async (id, hash) => {
-    return await api.get(`/auth/verify-email/${id}/${hash}`);
+    return await api.get(`/auth/verify-email/${secureId(id, 'userId')}/${secureId(hash, 'hash')}`);
   },
 
   /**
@@ -124,7 +123,7 @@ export const authService = {
    * @returns {Promise} API response
    */
   updateProfile: async (data) => {
-    return await api.patch('/auth/profile', data);
+    return await api.patch('/auth/profile', securePayload(data));
   },
 
   /**
@@ -133,6 +132,7 @@ export const authService = {
    * @returns {Promise} API response
    */
   updatePassword: async (data) => {
-    return await api.patch('/auth/password', data);
+    const encrypted = await encryptAuthCredentials(data);
+    return await api.patch('/auth/password', securePayload(encrypted));
   },
 };

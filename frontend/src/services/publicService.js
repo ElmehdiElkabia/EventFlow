@@ -1,4 +1,5 @@
 import api from './api';
+import { secureId, secureParams } from './serviceSecurity';
 
 /**
  * Public Event Service
@@ -12,7 +13,7 @@ export const eventService = {
    * @returns {Promise} API response
    */
   getEvents: (params = {}) => {
-    return api.get('/events', { params });
+    return api.get('/events', { params: secureParams(params) });
   },
 
   /**
@@ -21,7 +22,7 @@ export const eventService = {
    * @returns {Promise} API response
    */
   getEvent: (id) => {
-    return api.get(`/events/${id}`);
+    return api.get(`/events/${secureId(id, 'eventId')}`);
   },
 };
 

@@ -1,4 +1,6 @@
 import api from './api';
+import { secureId, secureParams, securePayload } from './serviceSecurity';
+import { encryptPaymentData } from './encryption';
 
 const billingService = {
   /**
@@ -15,7 +17,8 @@ const billingService = {
    * @returns {Promise} API response
    */
   addPaymentMethod: async (data) => {
-    return await api.post('/payment-methods', data);
+    const encrypted = await encryptPaymentData(data);
+    return await api.post('/payment-methods', securePayload(encrypted));
   },
 
   /**
@@ -25,7 +28,8 @@ const billingService = {
    * @returns {Promise} API response
    */
   updatePaymentMethod: async (id, data) => {
-    return await api.patch(`/payment-methods/${id}`, data);
+    const encrypted = await encryptPaymentData(data);
+    return await api.patch(`/payment-methods/${secureId(id, 'paymentMethodId')}`, securePayload(encrypted));
   },
 
   /**
@@ -34,7 +38,7 @@ const billingService = {
    * @returns {Promise} API response
    */
   setDefaultPaymentMethod: async (id) => {
-    return await api.patch(`/payment-methods/${id}/set-default`);
+    return await api.patch(`/payment-methods/${secureId(id, 'paymentMethodId')}/set-default`);
   },
 
   /**
@@ -43,7 +47,7 @@ const billingService = {
    * @returns {Promise} API response
    */
   deletePaymentMethod: async (id) => {
-    return await api.delete(`/payment-methods/${id}`);
+    return await api.delete(`/payment-methods/${secureId(id, 'paymentMethodId')}`);
   },
 
   /**
@@ -62,7 +66,7 @@ const billingService = {
    */
   getTransactions: async (page = 1, perPage = 10) => {
     return await api.get('/billing/transactions', {
-      params: { page, per_page: perPage }
+      params: secureParams({ page, per_page: perPage })
     });
   },
 
@@ -80,7 +84,7 @@ const billingService = {
    * @returns {Promise} API response
    */
   updateBillingAddress: async (data) => {
-    return await api.post('/billing/address', data);
+    return await api.post('/billing/address', securePayload(data));
   },
 
   /**
@@ -89,7 +93,7 @@ const billingService = {
    * @returns {Promise} API response
    */
   downloadReceipt: async (transactionId) => {
-    return await api.get(`/billing/transactions/${transactionId}/receipt`);
+    return await api.get(`/billing/transactions/${secureId(transactionId, 'transactionId')}/receipt`);
   },
 };
 
