@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\ValidationException;
@@ -13,6 +13,8 @@ use Illuminate\Auth\Events\Verified;
 
 class AuthController extends Controller
 {
+    private const AUTH_COOKIE_NAME = 'auth_token';
+
     /**
      * Register a new user
      */
@@ -38,14 +40,13 @@ class AuthController extends Controller
         // Trigger verification email
         event(new Registered($user));
 
-        // Create token
+        // Create personal access token and store in HttpOnly cookie.
         $token = $user->createToken('auth-token')->plainTextToken;
 
-        return response()->json([
+        return $this->withAuthCookie(response()->json([
             'success' => true,
             'message' => 'Registration successful. Please check your email to verify your account.',
             'data' => [
-                'token' => $token,
                 'user' => [
                     'id' => $user->id,
                     'name' => $user->name,
@@ -54,7 +55,7 @@ class AuthController extends Controller
                     'email_verified_at' => $user->email_verified_at,
                 ],
             ],
-        ], 201);
+        ], 201), $token);
     }
 
     /**
@@ -75,14 +76,14 @@ class AuthController extends Controller
             ]);
         }
 
-        // Create token
+        // Revoke previous tokens and issue a fresh token per login.
+        $user->tokens()->delete();
         $token = $user->createToken('auth-token')->plainTextToken;
 
-        return response()->json([
+        return $this->withAuthCookie(response()->json([
             'success' => true,
             'message' => 'Login successful',
             'data' => [
-                'token' => $token,
                 'user' => [
                     'id' => $user->id,
                     'name' => $user->name,
@@ -91,7 +92,7 @@ class AuthController extends Controller
                     'email_verified_at' => $user->email_verified_at,
                 ],
             ],
-        ]);
+        ]), $token);
     }
 
     /**
@@ -118,12 +119,22 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        $plainTextToken = $request->cookie(self::AUTH_COOKIE_NAME);
 
-        return response()->json([
+        if ($plainTextToken) {
+            $tokenParts = explode('|', $plainTextToken, 2);
+            if (count($tokenParts) === 2 && is_numeric($tokenParts[0])) {
+                $request->user()->tokens()->where('id', (int) $tokenParts[0])->delete();
+            }
+        } else {
+            // Fallback if request was authenticated by another mechanism.
+            $request->user()->currentAccessToken()?->delete();
+        }
+
+        return $this->withoutAuthCookie(response()->json([
             'success' => true,
             'message' => 'Logged out successfully',
-        ]);
+        ]));
     }
 
     /**
@@ -297,5 +308,37 @@ class AuthController extends Controller
             'success' => true,
             'message' => 'Password updated successfully',
         ]);
+    }
+
+    private function withAuthCookie(JsonResponse $response, string $token): JsonResponse
+    {
+        return $response->cookie(
+            self::AUTH_COOKIE_NAME,
+            $token,
+            (int) env('AUTH_COOKIE_TTL', 120),
+            '/',
+            env('AUTH_COOKIE_DOMAIN'),
+            $this->isAuthCookieSecure(),
+            true,
+            false,
+            env('AUTH_COOKIE_SAME_SITE', 'lax')
+        );
+    }
+
+    private function withoutAuthCookie(JsonResponse $response): JsonResponse
+    {
+        return $response->withoutCookie(
+            self::AUTH_COOKIE_NAME,
+            '/',
+            env('AUTH_COOKIE_DOMAIN')
+        );
+    }
+
+    private function isAuthCookieSecure(): bool
+    {
+        return filter_var(
+            env('AUTH_COOKIE_SECURE', app()->environment('production')),
+            FILTER_VALIDATE_BOOL
+        );
     }
 }
