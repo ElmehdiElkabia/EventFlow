@@ -15,6 +15,10 @@ class AttachSanctumTokenFromCookie
         if (!$request->bearerToken()) {
             $token = $request->cookie('auth_token');
 
+            if (is_string($token) && str_contains($token, '%7C')) {
+                $token = urldecode($token);
+            }
+
             if (is_string($token) && str_contains($token, '|')) {
                 $request->headers->set('Authorization', 'Bearer ' . $token);
             }

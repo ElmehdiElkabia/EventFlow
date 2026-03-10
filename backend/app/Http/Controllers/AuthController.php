@@ -43,7 +43,7 @@ class AuthController extends Controller
         // Create personal access token and store in HttpOnly cookie.
         $token = $user->createToken('auth-token')->plainTextToken;
 
-        return $this->withAuthCookie(response()->json([
+        return $this->withAuthCookie($request, response()->json([
             'success' => true,
             'message' => 'Registration successful. Please check your email to verify your account.',
             'data' => [
@@ -80,7 +80,7 @@ class AuthController extends Controller
         $user->tokens()->delete();
         $token = $user->createToken('auth-token')->plainTextToken;
 
-        return $this->withAuthCookie(response()->json([
+        return $this->withAuthCookie($request, response()->json([
             'success' => true,
             'message' => 'Login successful',
             'data' => [
@@ -310,12 +310,21 @@ class AuthController extends Controller
         ]);
     }
 
-    private function withAuthCookie(JsonResponse $response, string $token): JsonResponse
+    private function withAuthCookie(Request $request, JsonResponse $response, string $token): JsonResponse
     {
-        $sameSite = env(
-            'AUTH_COOKIE_SAME_SITE',
-            app()->environment('production') ? 'none' : 'lax'
-        );
+        $apiHost = parse_url((string) config('app.url'), PHP_URL_HOST) ?: $request->getHost();
+        $originHost = parse_url((string) $request->headers->get('origin'), PHP_URL_HOST);
+        $isCrossSite = is_string($originHost) && !empty($originHost) && !empty($apiHost) && strcasecmp($originHost, $apiHost) !== 0;
+
+        $sameSite = env('AUTH_COOKIE_SAME_SITE');
+        if (!is_string($sameSite) || $sameSite === '') {
+            $sameSite = $isCrossSite || app()->environment('production') ? 'none' : 'lax';
+        }
+
+        $secure = $this->isAuthCookieSecure();
+        if ($isCrossSite && strtolower($sameSite) === 'none') {
+            $secure = true;
+        }
 
         return $response->cookie(
             self::AUTH_COOKIE_NAME,
@@ -323,7 +332,7 @@ class AuthController extends Controller
             (int) env('AUTH_COOKIE_TTL', 120),
             '/',
             env('AUTH_COOKIE_DOMAIN'),
-            $this->isAuthCookieSecure(),
+            $secure,
             true,
             false,
             $sameSite
