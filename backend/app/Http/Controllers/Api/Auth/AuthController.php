@@ -32,6 +32,13 @@ class AuthController extends BaseController
             ]);
         }
 
+        // Check if user is suspended
+        if ($user->status === 'suspended') {
+            throw ValidationException::withMessages([
+                'email' => ['This account has been suspended and cannot log in. Please contact support.'],
+            ]);
+        }
+
         $token = $user->createToken('api-token')->plainTextToken;
 
         return $this->success([
