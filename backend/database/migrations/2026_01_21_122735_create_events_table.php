@@ -33,7 +33,9 @@ return new class extends Migration
             
             $table->index('status');
             $table->index('featured');
-            $table->fullText(['title', 'description']);
+                // TiDB Cloud Serverless doesn't support FULLTEXT without columnar replica
+                // Using regular indexes for search instead
+                $table->index('title');
         });
     }
 
