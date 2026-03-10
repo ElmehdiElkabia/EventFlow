@@ -312,6 +312,11 @@ class AuthController extends Controller
 
     private function withAuthCookie(JsonResponse $response, string $token): JsonResponse
     {
+        $sameSite = env(
+            'AUTH_COOKIE_SAME_SITE',
+            app()->environment('production') ? 'none' : 'lax'
+        );
+
         return $response->cookie(
             self::AUTH_COOKIE_NAME,
             $token,
@@ -321,7 +326,7 @@ class AuthController extends Controller
             $this->isAuthCookieSecure(),
             true,
             false,
-            env('AUTH_COOKIE_SAME_SITE', 'lax')
+            $sameSite
         );
     }
 
