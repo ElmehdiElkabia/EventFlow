@@ -7,6 +7,11 @@ use Illuminate\Http\Request;
 
 class Cors
 {
+    private function normalizeOrigin(string $origin): string
+    {
+        return rtrim(strtolower(trim($origin)), '/');
+    }
+
     private function resolveAllowedOrigin(Request $request): ?string
     {
         $origin = $request->headers->get('Origin');
@@ -14,12 +19,14 @@ class Cors
             return null;
         }
 
-        $allowedOrigins = array_filter(array_map('trim', explode(',', (string) env(
+        $normalizedOrigin = $this->normalizeOrigin($origin);
+
+        $allowedOrigins = array_filter(array_map($this->normalizeOrigin(...), explode(',', (string) env(
             'CORS_ALLOWED_ORIGINS',
             'http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000'
         ))));
 
-        return in_array($origin, $allowedOrigins, true) ? $origin : null;
+        return in_array($normalizedOrigin, $allowedOrigins, true) ? $origin : null;
     }
 
     private function applyCorsHeaders($response, ?string $allowedOrigin)
