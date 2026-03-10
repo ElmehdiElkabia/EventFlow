@@ -34,8 +34,8 @@ services:
       - ./backend:/app
       - ./backend/storage:/app/storage
       - ./backend/bootstrap/cache:/app/bootstrap/cache
+      - ./isrgrootx1.pem:/app/certs/isrgrootx1.pem:ro
     depends_on:
-      - db
       - redis
     networks:
       - eventflow
