@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [tickets, setTickets] = useState([]);
   const [reviews, setReviews] = useState([]);
@@ -34,14 +34,25 @@ const Dashboard = () => {
 
 
   useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     if (user?.role === 'attendee') {
       fetchAttendeeDashboard();
     } else if (user?.role === 'admin') {
       fetchAdminDashboard();
     } else if (user?.role === 'organizer') {
       fetchOrganizerDashboard();
+    } else {
+      setLoading(false);
     }
-  }, [user?.role]);
+  }, [authLoading, user]);
 
   const fetchAttendeeDashboard = async () => {
     try {

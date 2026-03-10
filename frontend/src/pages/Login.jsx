@@ -37,7 +37,9 @@ const Login = () => {
       navigate(from, { replace: true });
     } catch (error) {
       console.error('Login failed');
-      const errorMessage = error.response?.data?.message || 
+      const errorMessage = error.status === 401
+        ? "Login succeeded but session was not established. Check API cookie/CORS settings."
+        : error.response?.data?.message || 
                           error.response?.data?.errors?.email?.[0] ||
                           "Invalid email or password";
       toast.error(errorMessage);

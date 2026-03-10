@@ -44,15 +44,35 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
-    const response = await authService.login(email, password);
-    setUser(response.data.user);
-    return response;
+    await authService.login(email, password);
+
+    try {
+      const meResponse = await authService.me();
+      const authenticatedUser = meResponse.data;
+      setUser(authenticatedUser);
+      authStorage.setUser(authenticatedUser);
+      return meResponse;
+    } catch (error) {
+      authStorage.clearAuth();
+      setUser(null);
+      throw error;
+    }
   };
 
   const register = async (userData) => {
-    const response = await authService.register(userData);
-    setUser(response.data.user);
-    return response;
+    await authService.register(userData);
+
+    try {
+      const meResponse = await authService.me();
+      const authenticatedUser = meResponse.data;
+      setUser(authenticatedUser);
+      authStorage.setUser(authenticatedUser);
+      return meResponse;
+    } catch (error) {
+      authStorage.clearAuth();
+      setUser(null);
+      throw error;
+    }
   };
 
   const logout = async () => {
