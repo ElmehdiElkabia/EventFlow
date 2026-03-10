@@ -32,9 +32,9 @@ const EmailVerificationBanner = () => {
     <Alert variant="warning" className="mb-6 text-foreground">
       <Mail className="h-4 w-4 text-foreground" />
       <AlertTitle>Verify your email address</AlertTitle>
-      <AlertDescription className="flex items-center justify-between gap-4">
-        <span className="flex-1">
-          We've sent a verification link to <strong>{user.email}</strong>. 
+      <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <span className="flex-1 break-words text-sm leading-relaxed">
+          We've sent a verification link to <strong className="break-all">{user.email}</strong>.
           Please check your inbox and verify your email to access all features.
         </span>
         <Button
@@ -42,6 +42,7 @@ const EmailVerificationBanner = () => {
           variant="outline"
           size="sm"
           disabled={resending}
+          className="w-full sm:w-auto"
         >
           {resending ? (
             <>
