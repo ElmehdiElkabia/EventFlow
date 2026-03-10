@@ -23,10 +23,10 @@ const FeaturedEvents = () => {
         const response = await eventService.getEvents({ page: 1 });
         
         // API returns: { success: true, message: "Success", data: { data: [...], pagination: {...} } }
-        const eventsData = response.data?.data || [];
+        const eventsData = response.data?.data?.data || [];
         setEvents(eventsData.slice(0, 6)); // Limit to 6 for homepage
       } catch (err) {
-        console.error('Request failed');
+        console.error('Failed to fetch featured events:', err);
         setError(err.response?.data?.message || 'Failed to load events');
         toast.error('Failed to load featured events');
       } finally {

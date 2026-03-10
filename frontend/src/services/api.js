@@ -1,10 +1,12 @@
 import axios from 'axios';
 import { authStorage } from './authStorage';
 
-const FALLBACK_API_URL = 'http://localhost:8000/api';
-
 const resolveApiBaseUrl = () => {
-  const configuredApiUrl = import.meta.env.VITE_API_URL || FALLBACK_API_URL;
+  const configuredApiUrl = import.meta.env.VITE_API_URL;
+
+  if (!configuredApiUrl) {
+    throw new Error('VITE_API_URL is not defined.');
+  }
 
   if (import.meta.env.PROD && configuredApiUrl.startsWith('http://')) {
     throw new Error('In production, VITE_API_URL must use HTTPS.');
@@ -32,6 +34,7 @@ const sanitizeAxiosError = (error) => {
 
 const api = axios.create({
   baseURL: resolveApiBaseUrl(),
+  withCredentials: true,
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',
@@ -40,8 +43,6 @@ const api = axios.create({
     'Cache-Control': 'no-store',
     'Pragma': 'no-cache',
   },
-  // Use HttpOnly cookie-based auth.
-  withCredentials: true,
 });
 
 api.interceptors.request.use((config) => {

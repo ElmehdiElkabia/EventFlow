@@ -12,8 +12,11 @@ export const eventService = {
    * @param {Object} params - Query parameters (page, category, limit)
    * @returns {Promise} API response
    */
-  getEvents: (params = {}) => {
-    return api.get('/events', { params: secureParams(params) });
+  getEvents: async (params = {}) => {
+    const response = await api.get('/events', { params: secureParams(params) });
+
+    // Keep an Axios-like envelope so consumers can read response.data.data.data.
+    return { data: response };
   },
 
   /**

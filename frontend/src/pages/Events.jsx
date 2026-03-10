@@ -17,10 +17,17 @@ const Events = () => {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [reloadTick, setReloadTick] = useState(0);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    per_page: 15,
+    current_page: 1,
+    last_page: 1,
+  });
 
   // Fetch categories
   useEffect(() => {
@@ -54,26 +61,35 @@ const Events = () => {
     const fetchEvents = async () => {
       try {
         setLoading(true);
+        setError(null);
         const params = {
           page: currentPage,
         };
 
         const response = await eventService.getEvents(params);
-        const eventsData = response.data?.data || [];
-        const pagination = response.data?.pagination || {};
+        const eventsData = response.data?.data?.data || [];
+        const paginationData = response.data?.data?.pagination || {};
         
         setEvents(eventsData);
-        setTotalPages(pagination.last_page || 1);
+        setPagination({
+          total: paginationData.total || 0,
+          per_page: paginationData.per_page || 15,
+          current_page: paginationData.current_page || currentPage,
+          last_page: paginationData.last_page || 1,
+        });
       } catch (err) {
-        console.error('Request failed');
-        toast.error('Failed to load events');
+        console.error('Failed to fetch events:', err);
+        setEvents([]);
+        setPagination((prev) => ({ ...prev, current_page: currentPage, last_page: 1, total: 0 }));
+        setError(err.response?.data?.message || err.message || 'Failed to load events');
+        toast.error(err.response?.data?.message || 'Failed to load events');
       } finally {
         setLoading(false);
       }
     };
 
     fetchEvents();
-  }, [currentPage]);
+  }, [currentPage, reloadTick]);
 
   // Client-side filtering
   const filteredEvents = events.filter((event) => {
@@ -168,7 +184,7 @@ const Events = () => {
           {/* Results Count */}
           <div className="flex items-center justify-between mb-6">
             <p className="text-muted-foreground">
-              Showing <span className="text-foreground font-medium">{filteredEvents.length}</span> events
+              Showing <span className="text-foreground font-medium">{filteredEvents.length}</span> of <span className="text-foreground font-medium">{pagination.total}</span> events
             </p>
             {selectedCategory !== "all" && (
               <Badge variant="outline" className="cursor-pointer" onClick={() => setSelectedCategory("all")}>
@@ -183,6 +199,13 @@ const Events = () => {
             <div className="flex items-center justify-center py-16">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
+          ) : error ? (
+            <div className="text-center py-16">
+              <p className="text-destructive text-lg mb-4">{error}</p>
+              <Button variant="outline" onClick={() => setReloadTick((prev) => prev + 1)}>
+                Retry
+              </Button>
+            </div>
           ) : (
             <>
               {/* Events Grid */}
@@ -195,22 +218,22 @@ const Events = () => {
                   </div>
 
                   {/* Pagination */}
-                  {totalPages > 1 && (
+                  {pagination.last_page > 1 && (
                     <div className="flex items-center justify-center gap-2 mt-12">
                       <Button
                         variant="outline"
                         onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                        disabled={currentPage === 1}
+                        disabled={pagination.current_page === 1}
                       >
                         Previous
                       </Button>
                       <span className="text-sm text-muted-foreground px-4">
-                        Page {currentPage} of {totalPages}
+                        Page {pagination.current_page} of {pagination.last_page}
                       </span>
                       <Button
                         variant="outline"
-                        onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage((prev) => Math.min(pagination.last_page, prev + 1))}
+                        disabled={pagination.current_page === pagination.last_page}
                       >
                         Next
                       </Button>
