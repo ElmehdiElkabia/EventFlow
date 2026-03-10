@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { authService } from "@/services/authService";
 import { authStorage } from "@/services/authStorage";
+import { AUTH_UNAUTHORIZED_EVENT } from "@/services/api";
 
 const AuthContext = createContext(null);
 
@@ -30,6 +31,16 @@ export const AuthProvider = ({ children }) => {
     };
 
     initAuth();
+
+    const handleUnauthorized = () => {
+      setUser(null);
+    };
+
+    window.addEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized);
+
+    return () => {
+      window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized);
+    };
   }, []);
 
   const login = async (email, password) => {

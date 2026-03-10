@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { authStorage } from './authStorage';
 
+export const AUTH_UNAUTHORIZED_EVENT = 'auth:unauthorized';
+
 const resolveApiBaseUrl = () => {
   const configuredApiUrl = import.meta.env.VITE_API_URL;
 
@@ -59,10 +61,10 @@ api.interceptors.response.use(
   (response) => response.data,
   (error) => {
     if (error.response?.status === 401) {
-      // Unauthorized - clear token and redirect to login
+      // Unauthorized - clear cache and let UI decide if navigation is needed.
       authStorage.clearAuth();
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event(AUTH_UNAUTHORIZED_EVENT));
       }
     }
     return Promise.reject(sanitizeAxiosError(error));
