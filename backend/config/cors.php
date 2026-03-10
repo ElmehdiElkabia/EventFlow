@@ -3,8 +3,7 @@
 return [
     'paths' => ['api/*', 'sanctum/csrf-cookie'],
     'allowed_methods' => ['*'],
-    'allowed_origins' => [env('CORS_ALLOWED_ORIGINS')],
-
+    'allowed_origins' => [env('FRONTEND_URL')],
     'allowed_origins_patterns' => [],
     'allowed_headers' => ['*'],
     'exposed_headers' => [],
