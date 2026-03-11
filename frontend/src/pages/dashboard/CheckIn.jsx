@@ -244,7 +244,7 @@ const CheckIn = () => {
   return (
     <DashboardLayout role="organizer">
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:gap-6">
           <div>
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
               <Link to="/dashboard/my-events" className="hover:underline">
@@ -253,23 +253,23 @@ const CheckIn = () => {
               <span>/</span>
               <span>Check-in</span>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-              <QrCode className="h-7 w-7" />
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight flex items-center gap-2 sm:gap-3 mt-2">
+              <QrCode className="h-6 w-6 sm:h-7 sm:w-7" />
               Check-in
             </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-1 text-sm sm:text-base">
               Scan tickets and manage attendee check-ins for this event.
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" asChild>
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button variant="outline" asChild className="w-full sm:w-auto text-sm">
               <Link to="/dashboard/my-events">Back to Events</Link>
             </Button>
-            <Button onClick={loadData} variant="outline">
+            <Button onClick={loadData} variant="outline" className="w-full sm:w-auto text-sm">
               <RefreshCcw className="w-4 h-4 mr-2" />
               Refresh
             </Button>
-            <Button onClick={scanning ? stopScanner : startScanner} variant={scanning ? "destructive" : "default"}>
+            <Button onClick={scanning ? stopScanner : startScanner} variant={scanning ? "destructive" : "default"} className="w-full sm:w-auto text-sm">
               {scanning ? (
                 <>
                   <Camera className="w-4 h-4 mr-2" />
@@ -307,8 +307,8 @@ const CheckIn = () => {
             </CardHeader>
           </Card>
         ) : (
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2 space-y-6">
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3">
+            <div className="lg:col-span-2 space-y-4 sm:space-y-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
@@ -319,34 +319,34 @@ const CheckIn = () => {
                   </div>
                   <Badge variant="outline">{event?.status || "live"}</Badge>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <div className="p-4 rounded-lg border bg-muted/40">
-                      <div className="flex items-center gap-2 text-muted-foreground">
+                <CardContent className="space-y-3 sm:space-y-4">
+                  <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+                    <div className="p-3 sm:p-4 rounded-lg border bg-muted/40">
+                      <div className="flex items-center gap-2 text-muted-foreground text-sm">
                         <Users className="h-4 w-4" />
                         Total Attendees
                       </div>
-                      <div className="text-2xl font-semibold">{attendees.length}</div>
+                      <div className="text-xl sm:text-2xl font-semibold mt-1">{attendees.length}</div>
                     </div>
-                    <div className="p-4 rounded-lg border bg-muted/40">
-                      <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="p-3 sm:p-4 rounded-lg border bg-muted/40">
+                      <div className="flex items-center gap-2 text-muted-foreground text-sm">
                         <CheckCircle2 className="h-4 w-4" />
                         Checked In
                       </div>
-                      <div className="text-2xl font-semibold">{checkedInCount}</div>
+                      <div className="text-xl sm:text-2xl font-semibold mt-1">{checkedInCount}</div>
                     </div>
-                    <div className="p-4 rounded-lg border bg-muted/40">
-                      <div className="flex items-center gap-2 text-muted-foreground">
+                    <div className="p-3 sm:p-4 rounded-lg border bg-muted/40">
+                      <div className="flex items-center gap-2 text-muted-foreground text-sm">
                         <Ticket className="h-4 w-4" />
                         Pending
                       </div>
-                      <div className="text-2xl font-semibold">
+                      <div className="text-xl sm:text-2xl font-semibold mt-1">
                         {attendees.length - checkedInCount}
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-3 sm:gap-4 grid-cols-1 md:grid-cols-2">
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -416,13 +416,14 @@ const CheckIn = () => {
                       </CardHeader>
                       <CardContent>
                         <form onSubmit={handleManualCheckIn} className="space-y-3">
-                          <div className="flex gap-2">
+                          <div className="flex flex-col sm:flex-row gap-2">
                             <Input
                               placeholder="Enter ticket code or attendee ID"
                               value={manualCode}
                               onChange={(e) => setManualCode(e.target.value)}
+                              className="text-sm"
                             />
-                            <Button type="submit">Check-in</Button>
+                            <Button type="submit" size="sm" className="w-full sm:w-auto">Check-in</Button>
                           </div>
                           <p className="text-xs text-muted-foreground">
                             Enter the ticket code (e.g., TKT-xxxxx) from the QR code or attendee ID.
@@ -450,26 +451,27 @@ const CheckIn = () => {
                     />
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     {filteredAttendees.map((attendee) => (
                       <div
                         key={attendee.id}
-                        className="flex items-center justify-between p-4 rounded-lg border"
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 rounded-lg border"
                       >
-                        <div className="flex-1">
-                          <div className="font-medium">{attendee.name}</div>
-                          <div className="text-sm text-muted-foreground">{attendee.email}</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm sm:text-base">{attendee.name}</div>
+                          <div className="text-xs sm:text-sm text-muted-foreground truncate">{attendee.email}</div>
                           {attendee.ticketCode && (
                             <div className="text-xs text-muted-foreground mt-1">
                               Ticket: {attendee.ticketCode}
                             </div>
                           )}
                         </div>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 justify-between sm:justify-end">
                           <Badge
                             variant={
                               attendee.status === "checked_in" ? "default" : "secondary"
                             }
+                            className="text-xs"
                           >
                             {attendee.status === "checked_in" ? "Checked in" : "Pending"}
                           </Badge>
@@ -477,9 +479,9 @@ const CheckIn = () => {
                             <Button
                               size="sm"
                               onClick={() => processCheckIn(attendee.id)}
-                              className="flex items-center gap-1"
+                              className="flex items-center gap-1 text-xs"
                             >
-                              <CheckCircle2 className="h-4 w-4" />
+                              <CheckCircle2 className="h-3 w-3" />
                               Check-in
                             </Button>
                           )}
@@ -497,7 +499,7 @@ const CheckIn = () => {
               </Card>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <Card>
                 <CardHeader>
                   <CardTitle>Recent Check-ins</CardTitle>
