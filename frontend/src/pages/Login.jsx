@@ -9,19 +9,34 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
 
+  const validateEmail = (value) => {
+    if (!value) return "Email is required";
+    if (!emailRegex.test(value)) return "Enter a valid email (e.g. you@gmail.com)";
+    return "";
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!email || !password) {
+    const emailErr = validateEmail(email);
+    if (emailErr) {
+      setEmailError(emailErr);
+      return;
+    }
+
+    if (!password) {
       toast.error("Please fill in all fields");
       return;
     }
@@ -87,11 +102,17 @@ const Login = () => {
                     type="email"
                     placeholder="you@example.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 bg-background/50"
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setEmailError(validateEmail(e.target.value));
+                    }}
+                    className={`pl-10 bg-background/50 ${emailError ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                     required
                   />
                 </div>
+                {emailError && (
+                  <p className="text-xs text-red-400">{emailError}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -120,6 +141,9 @@ const Login = () => {
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
+                <p className="text-xs text-muted-foreground">
+                  Use 8+ characters with uppercase and lowercase letters.
+                </p>
               </div>
 
               <Button type="submit" variant="hero" className="w-full" size="lg" disabled={loading}>
