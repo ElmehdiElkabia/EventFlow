@@ -141,9 +141,6 @@ const Login = () => {
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Use 8+ characters with uppercase and lowercase letters.
-                </p>
               </div>
 
               <Button type="submit" variant="hero" className="w-full" size="lg" disabled={loading}>
