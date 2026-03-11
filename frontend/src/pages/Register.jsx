@@ -9,11 +9,22 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const passwordChecks = (pwd) => ({
+  length: pwd.length >= 8,
+  uppercase: /[A-Z]/.test(pwd),
+  lowercase: /[a-z]/.test(pwd),
+  number: /[0-9]/.test(pwd),
+  special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd),
+});
+
 const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [role, setRole] = useState("attendee");
@@ -21,8 +32,28 @@ const Register = () => {
   const navigate = useNavigate();
   const { register } = useAuth();
 
+  const checks = passwordChecks(password);
+  const allChecksPassed = checks.length && checks.uppercase && checks.lowercase && checks.number && checks.special;
+
+  const validateEmail = (value) => {
+    if (!value) return "Email is required";
+    if (!emailRegex.test(value)) return "Enter a valid email (e.g. you@gmail.com)";
+    return "";
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const emailErr = validateEmail(email);
+    if (emailErr) {
+      setEmailError(emailErr);
+      return;
+    }
+
+    if (!allChecksPassed) {
+      toast.error("Password must be 8+ characters with uppercase and lowercase letters");
+      return;
+    }
 
     // Validate passwords match
     if (password !== passwordConfirmation) {
@@ -101,13 +132,19 @@ const Register = () => {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder="you@gmail.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 bg-background/50"
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setEmailError(validateEmail(e.target.value));
+                    }}
+                    className={`pl-10 bg-background/50 ${emailError ? "border-red-500 focus-visible:ring-red-500" : ""}`}
                     required
                   />
                 </div>
+                {emailError && (
+                  <p className="text-xs text-red-400">{emailError}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -132,7 +169,23 @@ const Register = () => {
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
-                <p className="text-xs text-muted-foreground">Must be at least 8 characters</p>
+                <div className="space-y-1 pt-1">
+                  <p className={`text-xs flex items-center gap-1 ${checks.length ? "text-green-400" : "text-muted-foreground"}`}>
+                    <span>{checks.length ? "✓" : "○"}</span> At least 8 characters
+                  </p>
+                  <p className={`text-xs flex items-center gap-1 ${checks.uppercase ? "text-green-400" : "text-muted-foreground"}`}>
+                    <span>{checks.uppercase ? "✓" : "○"}</span> At least one uppercase letter (A–Z)
+                  </p>
+                  <p className={`text-xs flex items-center gap-1 ${checks.lowercase ? "text-green-400" : "text-muted-foreground"}`}>
+                    <span>{checks.lowercase ? "✓" : "○"}</span> At least one lowercase letter (a–z)
+                  </p>
+                  <p className={`text-xs flex items-center gap-1 ${checks.number ? "text-green-400" : "text-muted-foreground"}`}>
+                    <span>{checks.number ? "✓" : "○"}</span> At least one number (0–9)
+                  </p>
+                  <p className={`text-xs flex items-center gap-1 ${checks.special ? "text-green-400" : "text-muted-foreground"}`}>
+                    <span>{checks.special ? "✓" : "○"}</span> At least one special character (!@#$%^&amp;*...)
+                  </p>
+                </div>
               </div>
 
               <div className="space-y-2">
