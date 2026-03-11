@@ -107,7 +107,7 @@ const TicketSales = () => {
             <p className="text-muted-foreground">Track your ticket sales and revenue</p>
           </div>
           <Select value={selectedEvent} onValueChange={setSelectedEvent}>
-            <SelectTrigger className="w-full sm:w-64">
+            <SelectTrigger className="w-full sm:w-64 text-foreground">
               <SelectValue placeholder="Select event" />
             </SelectTrigger>
             <SelectContent>
